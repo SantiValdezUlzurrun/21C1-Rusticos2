@@ -1,0 +1,1 @@
+/home/santi/Documentos/Materias/7542\ -\ Taller\ de\ Programacion\ I/Rusticos2/target/debug/proyecto_taller_1: /home/santi/Documentos/Materias/7542\ -\ Taller\ de\ Programacion\ I/Rusticos2/src/main.rs /home/santi/Documentos/Materias/7542\ -\ Taller\ de\ Programacion\ I/Rusticos2/src/redis.rs

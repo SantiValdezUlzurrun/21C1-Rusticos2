@@ -1,0 +1,21 @@
+@startuml
+hide circle
+skinparam classAttributeIconSize 0
+skinparam monochrome true
+
+class Redis {
+	+iniciar(host : String, port : String) : void
+}
+
+class Parser {
+	+parsear(cadena : String) : String
+}
+
+class LogHandler {
+	+registrar_log(mensaje : String) : void
+}
+
+Redis --> Parser
+Redis --> LogHandler
+
+@enduml
