@@ -1,10 +1,10 @@
 use std::net::TcpStream;
-use std::io::BufRead;
-use std::io::BufReader;
-use std::io::Write;
 use std::net::TcpListener;
-
+use std::collections::HashMap;
+use std::io::Write;
 use crate::parser::Parser;
+use crate::comando::crear_comando;
+use crate::comando::ResultadoRedis;
 
 extern crate redis;
 
@@ -16,7 +16,7 @@ pub enum RedisError {
 
 pub struct Redis {
     direccion : String,
-    //tabla: BaseDatosRedis
+    tabla: HashMap<String, String>
 }
 
 impl Redis {
@@ -24,17 +24,18 @@ impl Redis {
     pub fn new(host: &str, port: &str) -> Self {
         Redis {
             direccion: host.to_string() + ":" + port,
+            tabla: HashMap::new(),
         }
     }
     
-    pub fn iniciar(&self) -> Result<(), RedisError>{
+    pub fn iniciar(&mut self) -> Result<(), RedisError>{
         let listener = match TcpListener::bind(&self.direccion) {
             Ok(l) => l,
-            Err(e) => return Err(RedisError::InicializacionError),
+            Err(_) => return Err(RedisError::InicializacionError),
         };
 
         for stream in listener.incoming() {
-            if let Ok(mut socket) = stream {
+            if let Ok(socket) = stream {
                 
                 match self.manejar_cliente(socket) {
                     Ok(()) => (),
@@ -45,29 +46,33 @@ impl Redis {
         Ok(())
     }
 
-   fn manejar_cliente(&self, mut socket: TcpStream) -> Result<(), RedisError> {
+   fn manejar_cliente(&mut self, socket: TcpStream) -> Result<(), RedisError> {
         
         let socket_clon = match socket.try_clone() {
             Ok(sock) => sock,
             _ => return Err(RedisError::ServerError),
-        };
+        }; 
+       
         let parser = Parser::new(socket_clon);
         let comando = match parser.parsear_stream() {
             Ok(orden) => orden,
-            Err(e) => return Err(RedisError::ServerError),
+            Err(_) => return Err(RedisError::ServerError),
         };
-        self.manejar_comando(comando, socket);
-
-        Ok(())
+       
+        self.manejar_comando(comando, socket)
     }
 
-    fn manejar_comando(&self, entrada: Vec<String>, mut stream: TcpStream) -> std::io::Result<()>{
-        println!("{:?}", entrada);
-        if "ping" == entrada[0] {
-            stream.write("PONG".as_bytes())?;
-            stream.write("\n".as_bytes())?;
+    fn manejar_comando(&mut self, entrada: Vec<String>, mut stream: TcpStream) -> Result<(), RedisError>{
+        let comando = crear_comando(&entrada);
+        let resultado = match comando.ejecutar(&mut self.tabla) {
+            Ok(ResultadoRedis::Str(r)) => r,
+            Err(_) => return Err(RedisError::ServerError),
+        };
+        
+        match stream.write(format!("+{}\r\n", resultado).as_bytes()) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(RedisError::ConeccionError),
         }
-        Ok(())
     }
     
     fn manejar_error(&self, error: RedisError) {

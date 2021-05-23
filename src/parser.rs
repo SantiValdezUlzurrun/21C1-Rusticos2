@@ -24,7 +24,7 @@ impl<R: Read> Parser<R> {
         let primer_valor = match lineas.next() {
             Some(Ok(valor)) => valor,
             _ => return Err(ParserError::MensajeVacioError),
-        };
+        }; 
 
         let capacidad = match parsear_int(primer_valor) {
             Some(valor) => valor,
@@ -45,6 +45,9 @@ impl<R: Read> Parser<R> {
                     return Err(ParserError::RedisSyntaxError)
                 }
                 comando.push(argumento);
+                if comando.len() == capacidad as usize {
+                    return Ok(comando);
+                }
             }
         }
         Ok(comando)

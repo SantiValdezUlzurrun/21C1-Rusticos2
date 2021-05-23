@@ -12,6 +12,10 @@ edition = "2018"
 name = "redis-server"
 path = "src/main.rs"
 
+[[bin]]
+name = "redis-cliente"
+path = "src/cliente.rs"
+
 [dependencies.redis]
 version = "*"
 
