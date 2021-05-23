@@ -1,4 +1,5 @@
 mod redis;
+mod parser;
 use crate::redis::Redis;
 
 fn main() -> std::io::Result<()>  {
@@ -9,4 +10,5 @@ fn main() -> std::io::Result<()>  {
     redis.iniciar();
 	Ok(())
 }
+
 

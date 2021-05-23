@@ -4,18 +4,35 @@ skinparam classAttributeIconSize 0
 skinparam monochrome true
 
 class Redis {
+	-direccion : String
+	-base : HashMap<String, TipoRedis>
 	+iniciar(host : String, port : String) : void
+	-manejar_cliente(socket: TcpStream) : void
 }
 
 class Parser {
-	+parsear(cadena : String) : String
+	+parsear_stream(cadena : String) : Comando
+	+parsear_resultado(resultado: Resultado_Redis) : String
 }
 
 class LogHandler {
 	+registrar_log(mensaje : String) : void
 }
 
+class Comando {
+	+ejecutar(base_de_datos : HashMap) : Resultado_Redis
+}
+
+class FabricaDeComandos {
+	{static} +crear(comando : Vec<String>) : Comando
+}
+
+
+Comando <<Interface>>
 Redis --> Parser
 Redis --> LogHandler
+Parser ..> FabricaDeComandos
+FabricaDeComandos -left-> Comando : <<Create>>
+Redis .right.> Comando
 
 @enduml
