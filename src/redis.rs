@@ -36,34 +36,39 @@ impl Redis {
 
         for stream in listener.incoming() {
             if let Ok(socket) = stream {
-                
-                match self.manejar_cliente(socket) {
+               
+                match self.manejar_cliente(&socket) {
                     Ok(()) => (),
                     Err(e) => self.manejar_error(e),
                 };
+                
             }
         }
         Ok(())
     }
 
-   fn manejar_cliente(&mut self, socket: TcpStream) -> Result<(), RedisError> {
+   fn manejar_cliente(&mut self, socket: &TcpStream) -> Result<(), RedisError> {
         
         let socket_clon = match socket.try_clone() {
             Ok(sock) => sock,
             _ => return Err(RedisError::ServerError),
         }; 
-       
-        let parser = Parser::new(socket_clon);
-        let comando = match parser.parsear_stream() {
-            Ok(orden) => orden,
-            Err(_) => return Err(RedisError::ServerError),
-        };
-       
-        self.manejar_comando(comando, socket)
+        loop {
+            let parser = Parser::new(&socket_clon);
+        
+            let comando = match parser.parsear_stream() {
+                Ok(orden) => orden,
+                Err(_) => return Err(RedisError::ServerError),
+            };
+           
+            self.manejar_comando(comando, socket);
+        }
+        Ok(())
     }
 
-    fn manejar_comando(&mut self, entrada: Vec<String>, mut stream: TcpStream) -> Result<(), RedisError>{
+    fn manejar_comando(&mut self, entrada: Vec<String>, mut stream: &TcpStream) -> Result<(), RedisError>{
         let comando = crear_comando(&entrada);
+        
         let resultado = match comando.ejecutar(&mut self.tabla) {
             Ok(ResultadoRedis::Str(r)) => r,
             Err(_) => return Err(RedisError::ServerError),
