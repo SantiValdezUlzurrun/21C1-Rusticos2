@@ -52,7 +52,6 @@ impl<R: Read> Parser<R> {
         }
         Ok(comando)
     }
-
 }     
 
 fn parsear_int(cadena: String) -> Option<u32> {

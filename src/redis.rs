@@ -41,7 +41,7 @@ impl Redis {
                     Ok(()) => (),
                     Err(e) => self.manejar_error(e),
                 };
-                
+              
             }
         }
         Ok(())
@@ -54,14 +54,22 @@ impl Redis {
             _ => return Err(RedisError::ServerError),
         }; 
         loop {
-            let parser = Parser::new(&socket_clon);
+
+            if self.cliente_envio_informacion(socket) {
+                let parser = Parser::new(&socket_clon);
         
-            let comando = match parser.parsear_stream() {
-                Ok(orden) => orden,
-                Err(_) => return Err(RedisError::ServerError),
-            };
-           
-            self.manejar_comando(comando, socket);
+                let comando = match parser.parsear_stream() {
+                    Ok(orden) => orden,
+                    Err(_) => return Err(RedisError::ServerError),
+                }; 
+                
+                match self.manejar_comando(comando, socket) {
+                    Ok(_) => (),
+                    Err(e) => return Err(e),
+                };
+            } else if !self.cliente_esta_conectado(socket) {
+                break;
+            }
         }
         Ok(())
     }
@@ -80,18 +88,24 @@ impl Redis {
         }
     }
     
+    fn cliente_envio_informacion(&self, socket :&TcpStream) -> bool {
+        
+        return match socket.peek(&mut [0; 128]) {
+            Ok(len) => len > 0,
+            Err(_) => false,
+        }
+    }
+    
+    fn cliente_esta_conectado(&self, socket :&TcpStream) -> bool {
+        
+        return match socket.peek(&mut [0; 128]) {
+            Ok(len) => len != 0,
+            Err(_) => false,
+        }
+    }
+    
     fn manejar_error(&self, error: RedisError) {
 
     }
     
-}
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn recibir_comando_de_redis() {
-        
-        assert_eq!(2 + 2, 4);
-    }
 }
