@@ -33,13 +33,11 @@ impl Redis {
             Err(_) => return Err(RedisError::InicializacionError),
         };
 
-        for stream in listener.incoming() {
-            if let Ok(socket) = stream {
-                match self.manejar_cliente(&socket) {
-                    Ok(()) => (),
-                    Err(e) => self.manejar_error(e),
-                };
-            }
+        for stream in listener.incoming().flatten() {
+            match self.manejar_cliente(&stream) {
+                Ok(()) => (),
+                Err(e) => self.manejar_error(e),
+            };
         }
         Ok(())
     }
