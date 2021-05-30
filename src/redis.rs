@@ -17,13 +17,17 @@ pub enum RedisError {
 pub struct Redis {
     direccion: String,
     tabla: HashMap<String, String>,
+    _verbose: bool,
+    _timeout: u32,
 }
 
 impl Redis {
-    pub fn new(host: &str, port: &str) -> Self {
+    pub fn new(host: &str, port: &str, _verbose: bool, _timeout: u32) -> Self {
         Redis {
             direccion: host.to_string() + ":" + port,
             tabla: HashMap::new(),
+            _verbose,
+            _timeout,
         }
     }
 
