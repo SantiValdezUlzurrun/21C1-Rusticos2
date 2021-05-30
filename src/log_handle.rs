@@ -2,7 +2,7 @@ use std::io::Write;
 use std::fs::OpenOptions;
 use std::fs;
 
-struct LogHandle {
+pub struct LogHandle {
     file_name: String
 }
 
@@ -52,12 +52,12 @@ mod tests {
     #[test]
     fn log_handle_guarda_info_del_comando_ejecutado(){
         
-        let log_handle = LogHandle::new("log_test".to_string());
+        let log_handle = LogHandle::new("log".to_string());
         let accion = vec!["PING","124.23.12.53"];
 
         log_handle.escribir_accion(accion);
        
-        let contents = fs::read_to_string("log_test").unwrap();
+        let contents = fs::read_to_string("log").unwrap();
 
         assert_eq!(contents, "Succesfull --> Client: 124.23.12.53 --> Send: PING\n");
 	}
@@ -65,12 +65,12 @@ mod tests {
     #[test]
     fn log_handle_guarda_info_del_comando_ejecutado_que_dio_erro(){
         
-        let log_handle = LogHandle::new("log_test".to_string());
+        let log_handle = LogHandle::new("log".to_string());
         let accion = vec!["GET","124.23.12.53","ParseError"];
         
         log_handle.escribir_accion(accion);
 
-        let contents = fs::read_to_string("log_test").unwrap();
+        let contents = fs::read_to_string("log").unwrap();
         
         assert_eq!(contents, "Succesfull --> Client: 124.23.12.53 --> Send: PING\nParseError --> Client: 124.23.12.53 --> Send: GET\n");
     }
