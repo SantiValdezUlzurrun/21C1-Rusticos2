@@ -1,21 +1,18 @@
 use std::collections::HashMap;
 
 pub enum ResultadoRedis {
-    Str(String),
-    //Int(u32),
-    //Vector(Vec<String>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum CommandError {
-    GetError,
+    StrSimple(String),
+    BulkStr(String),
+    Int(u32),
+    Vector(Vec<ResultadoRedis>),
+    Error(String),
 }
 
 pub trait Command {
     fn ejecutar(
         &self,
         hash_map: &mut HashMap<String, String>,
-    ) -> Result<ResultadoRedis, CommandError>;
+    ) -> ResultadoRedis;
 }
 
 struct SetCommand {
@@ -27,9 +24,9 @@ impl Command for SetCommand {
     fn ejecutar(
         &self,
         hash_map: &mut HashMap<String, String>,
-    ) -> Result<ResultadoRedis, CommandError> {
+    ) -> ResultadoRedis {
         hash_map.insert(self.clave.clone(), self.valor.clone());
-        Ok(ResultadoRedis::Str("OK".to_string()))
+        ResultadoRedis::StrSimple("OK".to_string())
     }
 }
 
@@ -47,10 +44,10 @@ impl Command for GetCommand {
     fn ejecutar(
         &self,
         hash_map: &mut HashMap<String, String>,
-    ) -> Result<ResultadoRedis, CommandError> {
+    ) -> ResultadoRedis {
         match hash_map.get(&self.clave) {
-            None => Err(CommandError::GetError),
-            Some(valor) => Ok(ResultadoRedis::Str(valor.to_string())),
+            None => ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
+            Some(valor) => ResultadoRedis::BulkStr(valor.to_string()),
         }
     }
 }
@@ -85,7 +82,7 @@ mod tests {
             "un_valor".to_string(),
         ];
         let set = crear_comando(&arg_vec);
-        set.ejecutar(&mut hash_map).unwrap();
+        set.ejecutar(&mut hash_map);
 
         assert!(hash_map.contains_key(&"una_clave".to_string()));
     }
@@ -101,7 +98,7 @@ mod tests {
             "un_valor".to_string(),
         ];
         let set1 = crear_comando(&arg_vec1);
-        set1.ejecutar(&mut hash_map).unwrap();
+        set1.ejecutar(&mut hash_map);
 
         //segundo comando get//
         let arg_vec2 = vec![
@@ -110,7 +107,7 @@ mod tests {
             "otro_valor".to_string(),
         ];
         let set2 = crear_comando(&arg_vec2);
-        set2.ejecutar(&mut hash_map).unwrap();
+        set2.ejecutar(&mut hash_map);
 
         assert_eq!(
             hash_map.get(&"una_clave".to_string()).unwrap(),

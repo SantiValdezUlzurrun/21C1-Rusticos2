@@ -1,4 +1,5 @@
 use std::io::{BufRead, BufReader, Read};
+use crate::comando::ResultadoRedis;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParserError {
@@ -50,7 +51,22 @@ impl<R: Read> Parser<R> {
         }
         Ok(comando)
     }
+
+   
 }
+pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
+        match res {
+            ResultadoRedis::StrSimple(cad) => format!("+{}\r\n", cad),
+            ResultadoRedis::BulkStr(cad) => format!("${}\r\n{}\r\n", cad.len(), cad),
+            ResultadoRedis::Int(ent) => format!(":{}\r\n", ent),
+            ResultadoRedis::Vector(vec) => format!("*{}\r\n{}", vec.len(), vec.iter()
+                                                                              .map(|r| parsear_respuesta(r))
+                                                                              .collect::<Vec<String>>()
+                                                                              .join("")),
+            ResultadoRedis::Error(e) => format!("-{}\r\n", e),
+        }
+
+    }
 
 pub fn parsear_int(cadena: String) -> Option<u32> {
     cadena

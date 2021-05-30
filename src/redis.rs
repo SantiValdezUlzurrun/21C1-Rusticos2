@@ -1,6 +1,8 @@
 use crate::comando::crear_comando;
 use crate::comando::ResultadoRedis;
 use crate::parser::Parser;
+use crate::parser::parsear_respuesta;
+
 use std::collections::HashMap;
 use std::io::Write;
 use std::net::TcpListener;
@@ -37,8 +39,8 @@ impl Redis {
             Err(_) => return Err(RedisError::InicializacionError),
         };
 
-        for stream in listener.incoming().flatten() {
-            match self.manejar_cliente(&stream) {
+        for mut stream in listener.incoming().flatten() {
+            match self.manejar_cliente(&mut stream) {
                 Ok(()) => (),
                 Err(e) => self.manejar_error(e),
             };
@@ -46,7 +48,7 @@ impl Redis {
         Ok(())
     }
 
-    fn manejar_cliente(&mut self, socket: &TcpStream) -> Result<(), RedisError> {
+    fn manejar_cliente(&mut self, socket: &mut TcpStream) -> Result<(), RedisError> {
         let socket_clon = match socket.try_clone() {
             Ok(sock) => sock,
             _ => return Err(RedisError::ServerError),
@@ -60,10 +62,14 @@ impl Redis {
                     Err(_) => return Err(RedisError::ServerError),
                 };
 
-                match self.manejar_comando(comando, socket) {
+                let resultado = self.manejar_comando(comando);
+
+                let respuesta = parsear_respuesta(&resultado);
+
+                match socket.write(respuesta.as_bytes()) {
                     Ok(_) => (),
-                    Err(e) => return Err(e),
-                };
+                    Err(_) => return Err(RedisError::ConeccionError),
+                }
             } else if !self.cliente_esta_conectado(socket) {
                 break;
             }
@@ -73,20 +79,10 @@ impl Redis {
 
     fn manejar_comando(
         &mut self,
-        entrada: Vec<String>,
-        mut stream: &TcpStream,
-    ) -> Result<(), RedisError> {
+        entrada: Vec<String>
+    ) -> ResultadoRedis {
         let comando = crear_comando(&entrada);
-
-        let resultado = match comando.ejecutar(&mut self.tabla) {
-            Ok(ResultadoRedis::Str(r)) => r,
-            Err(_) => return Err(RedisError::ServerError),
-        };
-
-        match stream.write(format!("+{}\r\n", resultado).as_bytes()) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(RedisError::ConeccionError),
-        }
+        comando.ejecutar(&mut self.tabla)
     }
 
     fn cliente_envio_informacion(&self, socket: &TcpStream) -> bool {
