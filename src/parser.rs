@@ -52,7 +52,7 @@ impl<R: Read> Parser<R> {
     }
 }
 
-fn parsear_int(cadena: String) -> Option<u32> {
+pub fn parsear_int(cadena: String) -> Option<u32> {
     cadena
         .chars()
         .find(|a| a.is_digit(10))
