@@ -1,7 +1,7 @@
 use crate::comando::crear_comando;
 use crate::comando::ResultadoRedis;
-use crate::parser::Parser;
 use crate::parser::parsear_respuesta;
+use crate::parser::Parser;
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -77,10 +77,7 @@ impl Redis {
         Ok(())
     }
 
-    fn manejar_comando(
-        &mut self,
-        entrada: Vec<String>
-    ) -> ResultadoRedis {
+    fn manejar_comando(&mut self, entrada: Vec<String>) -> ResultadoRedis {
         let comando = crear_comando(&entrada);
         comando.ejecutar(&mut self.tabla)
     }

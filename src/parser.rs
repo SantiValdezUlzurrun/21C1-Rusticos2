@@ -1,5 +1,5 @@
-use std::io::{BufRead, BufReader, Read};
 use crate::comando::ResultadoRedis;
+use std::io::{BufRead, BufReader, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParserError {
@@ -51,22 +51,23 @@ impl<R: Read> Parser<R> {
         }
         Ok(comando)
     }
-
-   
 }
 pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
-        match res {
-            ResultadoRedis::StrSimple(cad) => format!("+{}\r\n", cad),
-            ResultadoRedis::BulkStr(cad) => format!("${}\r\n{}\r\n", cad.len(), cad),
-            ResultadoRedis::Int(ent) => format!(":{}\r\n", ent),
-            ResultadoRedis::Vector(vec) => format!("*{}\r\n{}", vec.len(), vec.iter()
-                                                                              .map(|r| parsear_respuesta(r))
-                                                                              .collect::<Vec<String>>()
-                                                                              .join("")),
-            ResultadoRedis::Error(e) => format!("-{}\r\n", e),
-        }
-
+    match res {
+        ResultadoRedis::StrSimple(cad) => format!("+{}\r\n", cad),
+        ResultadoRedis::BulkStr(cad) => format!("${}\r\n{}\r\n", cad.len(), cad),
+        ResultadoRedis::Int(ent) => format!(":{}\r\n", ent),
+        ResultadoRedis::Vector(vec) => format!(
+            "*{}\r\n{}",
+            vec.len(),
+            vec.iter()
+                .map(|r| parsear_respuesta(r))
+                .collect::<Vec<String>>()
+                .join("")
+        ),
+        ResultadoRedis::Error(e) => format!("-{}\r\n", e),
     }
+}
 
 pub fn parsear_int(cadena: String) -> Option<u32> {
     cadena
@@ -119,5 +120,45 @@ mod tests {
         let parser = Parser::new(stream);
         let error = parser.parsear_stream().unwrap_err();
         assert_eq!(error, ParserError::RedisSyntaxError);
+    }
+
+    #[test]
+    fn cuando_se_envia_un_resultado_redis_simple_string_envia_un_string_correcto() {
+        let resultado = ResultadoRedis::StrSimple("Ok".to_string());
+        assert_eq!(parsear_respuesta(&resultado), "+Ok\r\n");
+    }
+
+    #[test]
+    fn cuando_se_envia_un_resultado_redis_bulk_strings_se_parsea_correctamente() {
+        let resultado = ResultadoRedis::BulkStr("foo".to_string());
+        assert_eq!(parsear_respuesta(&resultado), "$3\r\nfoo\r\n");
+    }
+
+    #[test]
+    fn cuando_se_envia_un_resultado_redis_int_se_parsea_correctamente() {
+        let resultado = ResultadoRedis::Int(55);
+        assert_eq!(parsear_respuesta(&resultado), ":55\r\n");
+    }
+
+    #[test]
+    fn cuando_se_envia_un_resultado_redis_vector_de_ints_se_parsea_correctamente() {
+        let resultado =
+            ResultadoRedis::Vector(vec![ResultadoRedis::Int(1), ResultadoRedis::Int(2)]);
+        assert_eq!(parsear_respuesta(&resultado), "*2\r\n:1\r\n:2\r\n");
+    }
+
+    #[test]
+    fn cuando_se_envia_un_resultado_redis_vector_de_resultados_se_parsea_correctamente() {
+        let resultado = ResultadoRedis::Vector(vec![
+            ResultadoRedis::Int(1),
+            ResultadoRedis::Int(2),
+            ResultadoRedis::Int(3),
+            ResultadoRedis::Int(4),
+            ResultadoRedis::BulkStr("foobar".to_string()),
+        ]);
+        assert_eq!(
+            parsear_respuesta(&resultado),
+            "*5\r\n:1\r\n:2\r\n:3\r\n:4\r\n$6\r\nfoobar\r\n"
+        );
     }
 }

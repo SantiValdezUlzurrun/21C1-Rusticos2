@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 pub enum ResultadoRedis {
     StrSimple(String),
     BulkStr(String),
@@ -9,10 +10,7 @@ pub enum ResultadoRedis {
 }
 
 pub trait Command {
-    fn ejecutar(
-        &self,
-        hash_map: &mut HashMap<String, String>,
-    ) -> ResultadoRedis;
+    fn ejecutar(&self, hash_map: &mut HashMap<String, String>) -> ResultadoRedis;
 }
 
 struct SetCommand {
@@ -21,10 +19,7 @@ struct SetCommand {
 }
 
 impl Command for SetCommand {
-    fn ejecutar(
-        &self,
-        hash_map: &mut HashMap<String, String>,
-    ) -> ResultadoRedis {
+    fn ejecutar(&self, hash_map: &mut HashMap<String, String>) -> ResultadoRedis {
         hash_map.insert(self.clave.clone(), self.valor.clone());
         ResultadoRedis::StrSimple("OK".to_string())
     }
@@ -41,10 +36,7 @@ struct GetCommand {
 }
 
 impl Command for GetCommand {
-    fn ejecutar(
-        &self,
-        hash_map: &mut HashMap<String, String>,
-    ) -> ResultadoRedis {
+    fn ejecutar(&self, hash_map: &mut HashMap<String, String>) -> ResultadoRedis {
         match hash_map.get(&self.clave) {
             None => ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
             Some(valor) => ResultadoRedis::BulkStr(valor.to_string()),
