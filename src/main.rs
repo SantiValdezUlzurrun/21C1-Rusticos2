@@ -1,12 +1,17 @@
 mod comando;
+mod log_handler;
 mod parser;
 mod redis;
+
+use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_int;
 use crate::redis::Redis;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::sync::mpsc::channel;
+use std::thread;
 
 pub enum ArchivoError {
     ArchivoInexistenteError,
@@ -77,13 +82,23 @@ fn main() {
         },
         None => Config::new(),
     };
-    println!("{:?}", config);
+
+    let (tx, rx) = channel();
+    let mut handler = LogHandler::new(config.logfile, rx);
+
+    let logger = Logger::new(tx);
+
+    let handle_log_handler = thread::spawn(move || {
+        handler.logear();
+    });
 
     let host: &str = "127.0.0.1";
 
-    let mut redis: Redis = Redis::new(host, &config.port, config.verbose, config.timeout);
+    let mut redis: Redis = Redis::new(host, &config.port, config.verbose, config.timeout, logger);
     match redis.iniciar() {
         Ok(_) => (),
         Err(_) => println!("Error al iniciar"),
-    }
+    };
+
+    handle_log_handler.join().unwrap();
 }
