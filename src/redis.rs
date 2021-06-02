@@ -3,13 +3,16 @@ use crate::comando::ResultadoRedis;
 use crate::log_handler::Logger;
 use crate::parser::parsear_respuesta;
 use crate::parser::Parser;
+use crate::log_handler::Mensaje;
 
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
-
+use std::thread;
+use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Sender;
 extern crate redis;
 
 pub enum RedisError {
@@ -30,20 +33,20 @@ impl fmt::Display for RedisError {
 
 pub struct Redis {
     direccion: String,
-    tabla: HashMap<String, String>,
+    tabla: Arc<Mutex<HashMap<String, String>>>,
     _verbose: bool,
     _timeout: u32,
-    logger: Logger,
+    tx: Sender<Mensaje>,
 }
 
 impl Redis {
-    pub fn new(host: &str, port: &str, _verbose: bool, _timeout: u32, logger: Logger) -> Self {
+    pub fn new(host: &str, port: &str, _verbose: bool, _timeout: u32, tx: Sender<Mensaje>) -> Self {
         Redis {
             direccion: host.to_string() + ":" + port,
-            tabla: HashMap::new(),
+            tabla: Arc::new(Mutex::new(HashMap::new())),
             _verbose,
             _timeout,
-            logger,
+            tx,
         }
     }
 
@@ -54,63 +57,73 @@ impl Redis {
         };
 
         for mut stream in listener.incoming().flatten() {
-            match self.manejar_cliente(&mut stream) {
-                Ok(()) => (),
-                Err(e) => self.manejar_error(e),
-            };
-        }
-        Ok(())
-    }
-
-    fn manejar_cliente(&mut self, socket: &mut TcpStream) -> Result<(), RedisError> {
-        let socket_clon = match socket.try_clone() {
-            Ok(sock) => sock,
-            _ => return Err(RedisError::ServerError),
-        };
-        loop {
-            if self.cliente_envio_informacion(socket) {
-                let parser = Parser::new(&socket_clon);
-
-                let comando = match parser.parsear_stream() {
-                    Ok(orden) => orden,
-                    Err(_) => return Err(RedisError::ServerError),
+            
+            let clon_tabla = Arc::clone(&self.tabla);
+            let logger = Logger::new(self.tx.clone());
+            logger.log("Se conecto usario".to_string());
+            thread::spawn(move || {
+                match manejar_cliente(&mut stream, clon_tabla) {
+                    Ok(()) => (),
+                    Err(e) => manejar_error(&logger,e),
                 };
-
-                let resultado = self.manejar_comando(comando);
-
-                let respuesta = parsear_respuesta(&resultado);
-
-                match socket.write(respuesta.as_bytes()) {
-                    Ok(_) => (),
-                    Err(_) => return Err(RedisError::ConeccionError),
-                }
-            } else if !self.cliente_esta_conectado(socket) {
-                break;
-            }
+                logger.log("se desconecto usuario".to_string());
+            });
+            
         }
         Ok(())
     }
 
-    fn manejar_comando(&mut self, entrada: Vec<String>) -> ResultadoRedis {
-        let comando = crear_comando(&entrada);
-        comando.ejecutar(&mut self.tabla)
-    }
+  }
 
-    fn cliente_envio_informacion(&self, socket: &TcpStream) -> bool {
-        match socket.peek(&mut [0; 128]) {
-            Ok(len) => len > 0,
-            Err(_) => false,
+fn manejar_cliente(socket: &mut TcpStream, tabla: Arc<Mutex<HashMap<String, String>>>) -> Result<(), RedisError> {
+    let socket_clon = match socket.try_clone() {
+        Ok(sock) => sock,
+        _ => return Err(RedisError::ServerError),
+    };
+    loop {
+        if cliente_envio_informacion(socket) {
+            let parser = Parser::new(&socket_clon);
+
+            let comando = match parser.parsear_stream() {
+                Ok(orden) => orden,
+                Err(_) => return Err(RedisError::ServerError),
+            };
+
+            let resultado = manejar_comando(comando, Arc::clone(&tabla));
+
+            let respuesta = parsear_respuesta(&resultado);
+
+            match socket.write(respuesta.as_bytes()) {
+                Ok(_) => (),
+                Err(_) => return Err(RedisError::ConeccionError),
+            }
+        } else if !cliente_esta_conectado(socket) {
+            break;
         }
     }
+    Ok(())
+}
 
-    fn cliente_esta_conectado(&self, socket: &TcpStream) -> bool {
-        match socket.peek(&mut [0; 128]) {
-            Ok(len) => len != 0,
-            Err(_) => false,
-        }
-    }
+fn manejar_comando(entrada: Vec<String>, tabla: Arc<Mutex<HashMap<String, String>>>) -> ResultadoRedis {
+    let comando = crear_comando(&entrada);
+    comando.ejecutar(tabla)
+}
 
-    fn manejar_error(&self, error: RedisError) {
-        self.logger.log(error.to_string());
+fn cliente_envio_informacion(socket: &TcpStream) -> bool {
+    match socket.peek(&mut [0; 128]) {
+        Ok(len) => len > 0,
+        Err(_) => false,
     }
 }
+
+fn cliente_esta_conectado(socket: &TcpStream) -> bool {
+    match socket.peek(&mut [0; 128]) {
+        Ok(len) => len != 0,
+        Err(_) => false,
+    }
+}
+
+fn manejar_error(logger: &Logger, error: RedisError) {
+    logger.log(error.to_string());
+}
+

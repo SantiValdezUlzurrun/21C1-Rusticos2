@@ -86,15 +86,13 @@ fn main() {
     let (tx, rx) = channel();
     let mut handler = LogHandler::new(config.logfile, rx);
 
-    let logger = Logger::new(tx);
-
     let handle_log_handler = thread::spawn(move || {
         handler.logear();
     });
 
     let host: &str = "127.0.0.1";
 
-    let mut redis: Redis = Redis::new(host, &config.port, config.verbose, config.timeout, logger);
+    let mut redis: Redis = Redis::new(host, &config.port, config.verbose, config.timeout, tx);
     match redis.iniciar() {
         Ok(_) => (),
         Err(_) => println!("Error al iniciar"),

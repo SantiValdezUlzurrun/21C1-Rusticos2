@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 #[allow(dead_code)]
 pub enum ResultadoRedis {
@@ -10,7 +11,7 @@ pub enum ResultadoRedis {
 }
 
 pub trait Command {
-    fn ejecutar(&self, hash_map: &mut HashMap<String, String>) -> ResultadoRedis;
+    fn ejecutar(&self, hash_map: Arc<Mutex<HashMap<String, String>>>) -> ResultadoRedis;
 }
 
 struct SetCommand {
@@ -19,8 +20,8 @@ struct SetCommand {
 }
 
 impl Command for SetCommand {
-    fn ejecutar(&self, hash_map: &mut HashMap<String, String>) -> ResultadoRedis {
-        hash_map.insert(self.clave.clone(), self.valor.clone());
+     fn ejecutar(&self, hash_map: Arc<Mutex<HashMap<String, String>>>) -> ResultadoRedis {
+        hash_map.lock().unwrap().insert(self.clave.clone(), self.valor.clone());
         ResultadoRedis::StrSimple("OK".to_string())
     }
 }
@@ -36,13 +37,14 @@ struct GetCommand {
 }
 
 impl Command for GetCommand {
-    fn ejecutar(&self, hash_map: &mut HashMap<String, String>) -> ResultadoRedis {
-        match hash_map.get(&self.clave) {
+    fn ejecutar(&self, hash_map: Arc<Mutex<HashMap<String, String>>>) -> ResultadoRedis {
+        match hash_map.lock().unwrap().get(&self.clave) {
             None => ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
             Some(valor) => ResultadoRedis::BulkStr(valor.to_string()),
         }
     }
 }
+
 impl GetCommand {
     fn new(clave: String) -> GetCommand {
         GetCommand { clave }
@@ -60,6 +62,7 @@ pub fn crear_comando(arg_vec: &[String]) -> Box<dyn Command> {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,3 +110,4 @@ mod tests {
         );
     }
 }
+*/
