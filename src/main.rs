@@ -2,6 +2,7 @@ mod comando;
 mod log_handler;
 mod parser;
 mod redis;
+mod persistencia;
 
 use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_int;

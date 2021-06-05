@@ -8,10 +8,6 @@ edition = "2018"
 
 [dependencies]
 [[bin]]
-name = "persistencia"
-path = "src/persistencia.rs"
-
-[[bin]]
 name = "redis-server"
 path = "src/main.rs"
 
