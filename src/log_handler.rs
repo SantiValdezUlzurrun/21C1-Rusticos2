@@ -51,8 +51,3 @@ impl Logger {
         self.log.send(Mensaje::Info(mensaje)).unwrap();
     }
 }
-impl Drop for Logger {
-    fn drop(&mut self) {
-        self.log.send(Mensaje::Cerrar).unwrap();
-    }
-}

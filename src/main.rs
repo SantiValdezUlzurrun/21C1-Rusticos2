@@ -4,15 +4,12 @@ mod parser;
 mod redis;
 mod persistencia;
 
-use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_int;
 use crate::redis::Redis;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::sync::mpsc::channel;
-use std::thread;
 
 pub enum ArchivoError {
     ArchivoInexistenteError,
@@ -22,6 +19,7 @@ pub enum ArchivoError {
 #[derive(Debug)]
 pub struct Config {
     verbose: bool,
+    host: String,
     port: String,
     timeout: u32,
     dbfilename: String,
@@ -32,6 +30,7 @@ impl Config {
     fn new() -> Self {
         Config {
             verbose: false,
+            host: "127.0.0.1".to_string(),
             port: "8080".to_string(),
             timeout: 0,
             dbfilename: "dump.rb".to_string(),
@@ -57,6 +56,8 @@ fn obtener_configuracion(ruta_archivo: String) -> Result<Config, ArchivoError> {
             config.dbfilename = argumento[1].to_string();
         } else if argumento[0] == "logfile" {
             config.logfile = argumento[1].to_string();
+        } else if argumento[0] == "host" {
+            config.host = argumento[1].to_string();
         } else if argumento[0] == "port" {
             config.port = argumento[1].to_string();
         } else {
@@ -84,22 +85,9 @@ fn main() {
         None => Config::new(),
     };
 
-    let (tx, rx) = channel();
-    let mut handler = LogHandler::new(config.logfile, rx);
-
-    let logger = Logger::new(tx);
-
-    let handle_log_handler = thread::spawn(move || {
-        handler.logear();
-    });
-
-    let host: &str = "127.0.0.1";
-
-    let mut redis: Redis = Redis::new(host, &config.port, config.verbose, config.timeout, logger);
+    let mut redis: Redis = Redis::new(config);
     match redis.iniciar() {
         Ok(_) => (),
         Err(_) => println!("Error al iniciar"),
     };
-
-    handle_log_handler.join().unwrap();
 }
