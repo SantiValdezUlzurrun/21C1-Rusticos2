@@ -70,7 +70,7 @@ impl Redis {
             Err(_) => return Err(RedisError::InicializacionError),
         };
 
-        for mut stream in listener.incoming().flatten().take(10) {
+        for mut stream in listener.incoming().flatten() {
             let clon_tabla = Arc::clone(&self.tabla);
             let logger = Logger::new(self.tx.clone());
             let handle = thread::spawn(move || {
@@ -91,14 +91,14 @@ impl Drop for Redis {
     fn drop(&mut self) {
         for cliente in &mut self.hilos_clientes {
             if let Some(hilo_cliente) = cliente.take() {
-                hilo_cliente.join();
+                if hilo_cliente.join().is_ok() {}
             }
         }
 
         self.tx.send(Mensaje::Cerrar).unwrap();
 
         if let Some(hilo) = self.hilo_log.take() {
-            hilo.join();
+            if hilo.join().is_ok() {}
         }
     }
 }
