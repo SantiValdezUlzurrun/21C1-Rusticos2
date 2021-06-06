@@ -1,4 +1,4 @@
-use crate::comando::crear_comando;
+use crate::comando::{crear_comando_handler, ComandoHandler, TipoRedis};
 use crate::comando::ResultadoRedis;
 use crate::log_handler::Mensaje;
 use crate::log_handler::{LogHandler, Logger};
@@ -36,7 +36,7 @@ impl fmt::Display for RedisError {
 
 pub struct Redis {
     direccion: String,
-    tabla: Arc<Mutex<HashMap<String, String>>>,
+    tabla: Arc<Mutex<HashMap<String, TipoRedis>>>,
     _verbose: bool,
     _timeout: u32,
     tx: Sender<Mensaje>,
@@ -105,7 +105,7 @@ impl Drop for Redis {
 
 fn manejar_cliente(
     socket: &mut TcpStream,
-    tabla: Arc<Mutex<HashMap<String, String>>>,
+    tabla: Arc<Mutex<HashMap<String, TipoRedis>>>,
 ) -> Result<(), RedisError> {
     let socket_clon = match socket.try_clone() {
         Ok(sock) => sock,
@@ -137,10 +137,11 @@ fn manejar_cliente(
 
 fn manejar_comando(
     entrada: Vec<String>,
-    tabla: Arc<Mutex<HashMap<String, String>>>,
+    tabla: Arc<Mutex<HashMap<String, TipoRedis>>>,
 ) -> ResultadoRedis {
-    let comando = crear_comando(&entrada);
-    comando.ejecutar(tabla)
+    
+    let handler = crear_comando_handler(entrada);
+    handler.ejecutar(tabla)
 }
 
 fn cliente_envio_informacion(socket: &TcpStream) -> bool {
