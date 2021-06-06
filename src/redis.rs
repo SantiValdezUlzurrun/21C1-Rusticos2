@@ -1,15 +1,21 @@
 use crate::comando::crear_comando;
 use crate::comando::ResultadoRedis;
-use crate::log_handler::Logger;
+use crate::log_handler::Mensaje;
+use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_respuesta;
 use crate::parser::Parser;
+use crate::Config;
 
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
-
+use std::sync::mpsc::channel;
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::thread::JoinHandle;
 extern crate redis;
 
 pub enum RedisError {
@@ -30,20 +36,31 @@ impl fmt::Display for RedisError {
 
 pub struct Redis {
     direccion: String,
-    tabla: HashMap<String, String>,
+    tabla: Arc<Mutex<HashMap<String, String>>>,
     _verbose: bool,
     _timeout: u32,
-    logger: Logger,
+    tx: Sender<Mensaje>,
+    hilo_log: Option<JoinHandle<()>>,
+    hilos_clientes: Vec<Option<JoinHandle<()>>>,
 }
 
 impl Redis {
-    pub fn new(host: &str, port: &str, _verbose: bool, _timeout: u32, logger: Logger) -> Self {
+    pub fn new(config: Config) -> Self {
+        let (tx, rx) = channel();
+        let mut handler = LogHandler::new(config.logfile, rx);
+
+        let hilo_log = thread::spawn(move || {
+            handler.logear();
+        });
+
         Redis {
-            direccion: host.to_string() + ":" + port,
-            tabla: HashMap::new(),
-            _verbose,
-            _timeout,
-            logger,
+            direccion: config.host + ":" + config.port.as_str(),
+            tabla: Arc::new(Mutex::new(HashMap::new())),
+            _verbose: config.verbose,
+            _timeout: config.timeout,
+            tx,
+            hilo_log: Some(hilo_log),
+            hilos_clientes: Vec::new(),
         }
     }
 
@@ -54,63 +71,92 @@ impl Redis {
         };
 
         for mut stream in listener.incoming().flatten() {
-            match self.manejar_cliente(&mut stream) {
-                Ok(()) => (),
-                Err(e) => self.manejar_error(e),
-            };
+            let clon_tabla = Arc::clone(&self.tabla);
+            let logger = Logger::new(self.tx.clone());
+            let handle = thread::spawn(move || {
+                logger.log("Se conecto usario".to_string());
+                match manejar_cliente(&mut stream, clon_tabla) {
+                    Ok(()) => (),
+                    Err(e) => manejar_error(&logger, e),
+                };
+                logger.log("se desconecto usuario".to_string());
+            });
+            self.hilos_clientes.push(Some(handle));
         }
         Ok(())
     }
+}
 
-    fn manejar_cliente(&mut self, socket: &mut TcpStream) -> Result<(), RedisError> {
-        let socket_clon = match socket.try_clone() {
-            Ok(sock) => sock,
-            _ => return Err(RedisError::ServerError),
-        };
-        loop {
-            if self.cliente_envio_informacion(socket) {
-                let parser = Parser::new(&socket_clon);
-
-                let comando = match parser.parsear_stream() {
-                    Ok(orden) => orden,
-                    Err(_) => return Err(RedisError::ServerError),
-                };
-
-                let resultado = self.manejar_comando(comando);
-
-                let respuesta = parsear_respuesta(&resultado);
-
-                match socket.write(respuesta.as_bytes()) {
-                    Ok(_) => (),
-                    Err(_) => return Err(RedisError::ConeccionError),
-                }
-            } else if !self.cliente_esta_conectado(socket) {
-                break;
+impl Drop for Redis {
+    fn drop(&mut self) {
+        for cliente in &mut self.hilos_clientes {
+            if let Some(hilo_cliente) = cliente.take() {
+                if hilo_cliente.join().is_ok() {}
             }
         }
-        Ok(())
-    }
 
-    fn manejar_comando(&mut self, entrada: Vec<String>) -> ResultadoRedis {
-        let comando = crear_comando(&entrada);
-        comando.ejecutar(&mut self.tabla)
-    }
+        self.tx.send(Mensaje::Cerrar).unwrap();
 
-    fn cliente_envio_informacion(&self, socket: &TcpStream) -> bool {
-        match socket.peek(&mut [0; 128]) {
-            Ok(len) => len > 0,
-            Err(_) => false,
+        if let Some(hilo) = self.hilo_log.take() {
+            if hilo.join().is_ok() {}
         }
     }
+}
 
-    fn cliente_esta_conectado(&self, socket: &TcpStream) -> bool {
-        match socket.peek(&mut [0; 128]) {
-            Ok(len) => len != 0,
-            Err(_) => false,
+fn manejar_cliente(
+    socket: &mut TcpStream,
+    tabla: Arc<Mutex<HashMap<String, String>>>,
+) -> Result<(), RedisError> {
+    let socket_clon = match socket.try_clone() {
+        Ok(sock) => sock,
+        _ => return Err(RedisError::ServerError),
+    };
+    loop {
+        if cliente_envio_informacion(socket) {
+            let parser = Parser::new(&socket_clon);
+
+            let comando = match parser.parsear_stream() {
+                Ok(orden) => orden,
+                Err(_) => return Err(RedisError::ServerError),
+            };
+
+            let resultado = manejar_comando(comando, Arc::clone(&tabla));
+
+            let respuesta = parsear_respuesta(&resultado);
+
+            match socket.write(respuesta.as_bytes()) {
+                Ok(_) => (),
+                Err(_) => return Err(RedisError::ConeccionError),
+            }
+        } else if !cliente_esta_conectado(socket) {
+            break;
         }
     }
+    Ok(())
+}
 
-    fn manejar_error(&self, error: RedisError) {
-        self.logger.log(error.to_string());
+fn manejar_comando(
+    entrada: Vec<String>,
+    tabla: Arc<Mutex<HashMap<String, String>>>,
+) -> ResultadoRedis {
+    let comando = crear_comando(&entrada);
+    comando.ejecutar(tabla)
+}
+
+fn cliente_envio_informacion(socket: &TcpStream) -> bool {
+    match socket.peek(&mut [0; 128]) {
+        Ok(len) => len > 0,
+        Err(_) => false,
     }
+}
+
+fn cliente_esta_conectado(socket: &TcpStream) -> bool {
+    match socket.peek(&mut [0; 128]) {
+        Ok(len) => len != 0,
+        Err(_) => false,
+    }
+}
+
+fn manejar_error(logger: &Logger, error: RedisError) {
+    logger.log(error.to_string());
 }
