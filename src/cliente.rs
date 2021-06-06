@@ -1,12 +1,10 @@
 use std::thread;
 
 fn main() -> redis::RedisResult<()> {
-   
     let mut handles = vec![];
 
     for _ in 0..10 {
         let handle = thread::spawn(move || {
-            
             let client = match redis::Client::open("redis://127.0.0.1:8080/") {
                 Ok(a) => a,
                 Err(_) => return (),
@@ -27,7 +25,7 @@ fn main() -> redis::RedisResult<()> {
         });
         handles.push(handle);
     }
-   
+
     for handle in handles {
         handle.join().unwrap();
     }

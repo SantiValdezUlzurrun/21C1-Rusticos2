@@ -20,8 +20,11 @@ struct SetCommand {
 }
 
 impl Command for SetCommand {
-     fn ejecutar(&self, hash_map: Arc<Mutex<HashMap<String, String>>>) -> ResultadoRedis {
-        hash_map.lock().unwrap().insert(self.clave.clone(), self.valor.clone());
+    fn ejecutar(&self, hash_map: Arc<Mutex<HashMap<String, String>>>) -> ResultadoRedis {
+        hash_map
+            .lock()
+            .unwrap()
+            .insert(self.clave.clone(), self.valor.clone());
         ResultadoRedis::StrSimple("OK".to_string())
     }
 }

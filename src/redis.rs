@@ -1,18 +1,21 @@
 use crate::comando::crear_comando;
 use crate::comando::ResultadoRedis;
-use crate::log_handler::Logger;
+use crate::log_handler::Mensaje;
+use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_respuesta;
 use crate::parser::Parser;
-use crate::log_handler::Mensaje;
+use crate::Config;
 
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
-use std::thread;
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::thread::JoinHandle;
 extern crate redis;
 
 pub enum RedisError {
@@ -37,16 +40,27 @@ pub struct Redis {
     _verbose: bool,
     _timeout: u32,
     tx: Sender<Mensaje>,
+    hilo_log: Option<JoinHandle<()>>,
+    hilos_clientes: Vec<Option<JoinHandle<()>>>,
 }
 
 impl Redis {
-    pub fn new(host: &str, port: &str, _verbose: bool, _timeout: u32, tx: Sender<Mensaje>) -> Self {
+    pub fn new(config: Config) -> Self {
+        let (tx, rx) = channel();
+        let mut handler = LogHandler::new(config.logfile, rx);
+
+        let hilo_log = thread::spawn(move || {
+            handler.logear();
+        });
+
         Redis {
-            direccion: host.to_string() + ":" + port,
+            direccion: config.host + ":" + config.port.as_str(),
             tabla: Arc::new(Mutex::new(HashMap::new())),
-            _verbose,
-            _timeout,
+            _verbose: config.verbose,
+            _timeout: config.timeout,
             tx,
+            hilo_log: Some(hilo_log),
+            hilos_clientes: Vec::new(),
         }
     }
 
@@ -56,26 +70,43 @@ impl Redis {
             Err(_) => return Err(RedisError::InicializacionError),
         };
 
-        for mut stream in listener.incoming().flatten() {
-            
+        for mut stream in listener.incoming().flatten().take(10) {
             let clon_tabla = Arc::clone(&self.tabla);
             let logger = Logger::new(self.tx.clone());
-            logger.log("Se conecto usario".to_string());
-            thread::spawn(move || {
+            let handle = thread::spawn(move || {
+                logger.log("Se conecto usario".to_string());
                 match manejar_cliente(&mut stream, clon_tabla) {
                     Ok(()) => (),
-                    Err(e) => manejar_error(&logger,e),
+                    Err(e) => manejar_error(&logger, e),
                 };
                 logger.log("se desconecto usuario".to_string());
             });
-            
+            self.hilos_clientes.push(Some(handle));
         }
         Ok(())
     }
+}
 
-  }
+impl Drop for Redis {
+    fn drop(&mut self) {
+        for cliente in &mut self.hilos_clientes {
+            if let Some(hilo_cliente) = cliente.take() {
+                hilo_cliente.join();
+            }
+        }
 
-fn manejar_cliente(socket: &mut TcpStream, tabla: Arc<Mutex<HashMap<String, String>>>) -> Result<(), RedisError> {
+        self.tx.send(Mensaje::Cerrar).unwrap();
+
+        if let Some(hilo) = self.hilo_log.take() {
+            hilo.join();
+        }
+    }
+}
+
+fn manejar_cliente(
+    socket: &mut TcpStream,
+    tabla: Arc<Mutex<HashMap<String, String>>>,
+) -> Result<(), RedisError> {
     let socket_clon = match socket.try_clone() {
         Ok(sock) => sock,
         _ => return Err(RedisError::ServerError),
@@ -104,7 +135,10 @@ fn manejar_cliente(socket: &mut TcpStream, tabla: Arc<Mutex<HashMap<String, Stri
     Ok(())
 }
 
-fn manejar_comando(entrada: Vec<String>, tabla: Arc<Mutex<HashMap<String, String>>>) -> ResultadoRedis {
+fn manejar_comando(
+    entrada: Vec<String>,
+    tabla: Arc<Mutex<HashMap<String, String>>>,
+) -> ResultadoRedis {
     let comando = crear_comando(&entrada);
     comando.ejecutar(tabla)
 }
@@ -126,4 +160,3 @@ fn cliente_esta_conectado(socket: &TcpStream) -> bool {
 fn manejar_error(logger: &Logger, error: RedisError) {
     logger.log(error.to_string());
 }
-
