@@ -2,8 +2,8 @@ mod comando;
 mod comando_string_handler;
 mod log_handler;
 mod parser;
-mod redis;
 mod persistencia;
+mod redis;
 
 use crate::parser::parsear_int;
 use crate::redis::Redis;
