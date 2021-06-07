@@ -4,11 +4,11 @@ use std::collections::{LinkedList, HashSet};
 
 use crate::comando_string_handler::{ComandoStringHandler, es_comando_string};
 
-#[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub enum ResultadoRedis {
     StrSimple(String),
     BulkStr(String),
-    Int(u32),
+    Int(usize),
     Vector(Vec<ResultadoRedis>),
     Error(String),
 }
