@@ -1,6 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, LinkedList};
 use std::sync::{Arc, Mutex};
-use std::collections::{LinkedList, HashSet};
 
 use crate::comando_string_handler::{ComandoStringHandler, es_comando_string};
 
@@ -41,10 +40,6 @@ pub type Comando = Box<dyn FnOnce(&Vec<String>, Arc<Mutex<HashMap<String, TipoRe
 /*
 pub struct RedisLista {
     lista: LinkedList<RedisString>, 
-}
-
-pub struct RedisSet {
-    set: HashSet<RedisString>, 
 }
 */
 

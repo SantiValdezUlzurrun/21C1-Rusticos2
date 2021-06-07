@@ -1,5 +1,6 @@
 mod comando;
 mod comando_string_handler;
+mod comando_set_handler;
 mod log_handler;
 mod parser;
 mod redis;
