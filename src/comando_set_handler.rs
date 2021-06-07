@@ -48,7 +48,7 @@ fn sadd(comando: &Vec<String>,  hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>
         _ => return ResultadoRedis::Error("WrongTypeError error al obtener el set, valor guardado en la clave no es un Set".to_string()),
     };
     hash_map.lock().unwrap().insert(comando[1].clone(), TipoRedis::Set(a_agregar));
-    ResultadoRedis::Int(comando[2..].len() as u32)
+    ResultadoRedis::Int(comando[2..].len())
 }
 
 fn aggregar_al_set(valores: &[String], set : &mut HashSet<String>) -> HashSet<String>{
@@ -62,7 +62,7 @@ fn aggregar_al_set(valores: &[String], set : &mut HashSet<String>) -> HashSet<St
 
 fn scard(comando: &Vec<String>,  hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
     match hash_map.lock().unwrap().get(&comando[1]) {
-        Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len() as u32),
+        Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len()),
         None => ResultadoRedis::Int(0),
         _ => ResultadoRedis::Error("WrongTypeError error al obtener el set, valor guardado en la clave no es un Set".to_string()),
     }
@@ -98,7 +98,7 @@ fn srem(comando: &Vec<String>,  hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>
     };
 
     hash_map.lock().unwrap().insert(comando[1].clone(), TipoRedis::Set(a_agregar));
-    ResultadoRedis::Int(comando[2..].len() as u32)
+    ResultadoRedis::Int(comando[2..].len())
 }
 
 

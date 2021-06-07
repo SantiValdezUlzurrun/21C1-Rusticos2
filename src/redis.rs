@@ -1,5 +1,5 @@
-use crate::comando::{crear_comando_handler, ComandoHandler, TipoRedis};
 use crate::comando::ResultadoRedis;
+use crate::comando::{crear_comando_handler, ComandoHandler, TipoRedis};
 use crate::log_handler::Mensaje;
 use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_respuesta;
@@ -139,7 +139,6 @@ fn manejar_comando(
     entrada: Vec<String>,
     tabla: Arc<Mutex<HashMap<String, TipoRedis>>>,
 ) -> ResultadoRedis {
-    
     let handler = crear_comando_handler(entrada);
     handler.ejecutar(tabla)
 }

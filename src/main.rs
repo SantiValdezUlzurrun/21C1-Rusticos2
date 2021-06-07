@@ -3,6 +3,7 @@ mod comando_string_handler;
 mod comando_set_handler;
 mod log_handler;
 mod parser;
+mod persistencia;
 mod redis;
 
 use crate::parser::parsear_int;
