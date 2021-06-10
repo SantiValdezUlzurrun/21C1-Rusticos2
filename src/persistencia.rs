@@ -66,10 +66,8 @@ fn cargar_en_vector(archivo: &str) -> Vec<String> {
     let file = File::open(archivo).unwrap();
     let reader = BufReader::new(file);
 
-    for line in reader.lines() {
-        if let Ok(linea) = line {
-            vector.push(linea);
-        }
+    for linea in reader.lines().flatten() {
+        vector.push(linea);
     }
     vector
 }
