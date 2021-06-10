@@ -37,30 +37,27 @@ impl ComandoHandler for ComandoStringHandler {
     }
 }
 
-pub fn es_comando_string(comando: &String) -> bool {
+pub fn es_comando_string(comando: &str) -> bool {
     let comandos = vec!["GET", "SET", "APPEND"];
     comandos.iter().any(|&c| c == comando)
 }
 
-fn get(comando: &Vec<String>, hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
+fn get(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
     match hash_map.lock().unwrap().get(&comando[1]) {
         Some(TipoRedis::Str(valor)) => ResultadoRedis::BulkStr(valor.to_string()),
         _ => ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
     }
 }
 
-fn set(comando: &Vec<String>, hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
+fn set(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
     hash_map
         .lock()
         .unwrap()
         .insert(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
     ResultadoRedis::StrSimple("OK".to_string())
 }
-
-fn append(
-    comando: &Vec<String>,
-    hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
-) -> ResultadoRedis {
+#[allow(dead_code)]
+fn append(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
     if hash_map.lock().unwrap().contains_key(&comando[1]) {
         let valor = match get(comando, hash_map.clone()) {
             ResultadoRedis::BulkStr(valor) => valor + &comando[2],
@@ -79,21 +76,15 @@ fn append(
         .insert(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
     ResultadoRedis::Int(comando[2].len())
 }
-
-fn getdel(
-    comando: &Vec<String>,
-    hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
-) -> ResultadoRedis {
+#[allow(dead_code)]
+fn getdel(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
     let hash_map_clon = Arc::clone(&hash_map);
     let resultado = get(comando, hash_map_clon);
     hash_map.lock().unwrap().remove(&comando[1]);
     resultado
 }
-
-fn strlen(
-    comando: &Vec<String>,
-    hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
-) -> ResultadoRedis {
+#[allow(dead_code)]
+fn strlen(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
     match hash_map.lock().unwrap().get(&comando[1]) {
         Some(TipoRedis::Str(valor)) => ResultadoRedis::Int(valor.len()),
         _ => ResultadoRedis::Error("StrLen error al obtener la clave".to_string()),

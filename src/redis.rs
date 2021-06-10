@@ -1,5 +1,5 @@
 use crate::comando::ResultadoRedis;
-use crate::comando::{crear_comando_handler, ComandoHandler, TipoRedis};
+use crate::comando::{crear_comando_handler, TipoRedis};
 use crate::log_handler::Mensaje;
 use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_respuesta;

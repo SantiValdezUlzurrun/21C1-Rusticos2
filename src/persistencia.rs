@@ -4,28 +4,32 @@ use std::fs::OpenOptions;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
-
+#[allow(dead_code)]
 const SEPARADOR: &str = "\\r\\n";
+#[allow(dead_code)]
 const FORMATO_GET: &str = "*3\\r\\n$3\\r\\nSET\\r\\n";
+#[allow(dead_code)]
 const FORMATO_LPUSH: &str = "$4\\r\\nLPUSH\\r\\n";
+#[allow(dead_code)]
 const ID_ARG: &str = "*";
+#[allow(dead_code)]
 const ID_TAM_STR: &str = "$";
-
+#[allow(dead_code)]
 pub enum TipoRedis {
     Str(String),
     List(LinkedList<String>),
 }
-
+#[allow(dead_code)]
 fn guardar_elemento(elemento: &str) -> String {
     let len_elemento = elemento.len();
     ID_TAM_STR.to_string() + &len_elemento.to_string() + SEPARADOR + elemento + SEPARADOR
 }
-
+#[allow(dead_code)]
 fn guardar_cant_arg(lista: &LinkedList<String>) -> String {
     let cant_arg = lista.len() + 2;
     ID_ARG.to_string() + &cant_arg.to_string() + SEPARADOR
 }
-
+#[allow(dead_code)]
 fn guardar_clave_valor(clave: String, valor: &TipoRedis) -> String {
     match valor {
         TipoRedis::Str(valor) => {

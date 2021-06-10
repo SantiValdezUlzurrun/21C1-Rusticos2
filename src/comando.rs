@@ -2,6 +2,8 @@ use std::collections::{HashMap, HashSet, LinkedList};
 use std::sync::{Arc, Mutex};
 
 use crate::comando_string_handler::{es_comando_string, ComandoStringHandler};
+
+#[allow(unused_imports)] //TODO: Sacar esto
 use crate::comando_set_handler::{es_comando_set, ComandoSetHandler};
 
 #[derive(Debug, PartialEq)]
@@ -12,6 +14,8 @@ pub enum ResultadoRedis {
     Vector(Vec<ResultadoRedis>),
     Error(String),
 }
+
+#[allow(dead_code)] //TODO: Sacar esto
 #[derive(Debug, PartialEq)]
 pub enum TipoRedis {
     Str(String),
@@ -29,16 +33,16 @@ pub trait ComandoHandler {
 pub fn crear_comando_handler(comando: Vec<String>) -> Box<dyn ComandoHandler> {
     if es_comando_string(&comando[0]) {
         Box::new(ComandoStringHandler::new(comando))
-    } else { //if es_comando_set(&comando[0]) {
+    } else {
+        //if es_comando_set(&comando[0]) {
         Box::new(ComandoSetHandler::new(comando))
-    }/*else {
-        ComandoListaHandler::new(comando);
-    }*/
+    } /*else {
+          ComandoListaHandler::new(comando);
+      }*/
 }
 
-pub type Comando = Box<
-    dyn FnOnce(&Vec<String>, Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis + 'static,
->;
+pub type Comando =
+    Box<dyn FnOnce(&[String], Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis + 'static>;
 
 /*
 pub struct RedisLista {
