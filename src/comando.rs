@@ -12,7 +12,7 @@ pub enum ResultadoRedis {
     Vector(Vec<ResultadoRedis>),
     Error(String),
 }
-
+#[derive(Debug, PartialEq)]
 pub enum TipoRedis {
     Str(String),
     Lista(LinkedList<String>),
