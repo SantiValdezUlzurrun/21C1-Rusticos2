@@ -1,4 +1,4 @@
-use crate::comando::ResultadoRedis;
+use crate::base_de_datos::ResultadoRedis;
 use std::io::{BufRead, BufReader, Read};
 
 #[derive(Debug, Clone, PartialEq)]

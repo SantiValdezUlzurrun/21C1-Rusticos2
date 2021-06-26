@@ -1,4 +1,5 @@
-use crate::comando::{Comando, ComandoHandler, ResultadoRedis, TipoRedis};
+use crate::comando::{Comando, ComandoHandler};
+use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
@@ -26,9 +27,9 @@ impl ComandoSetHandler {
 impl ComandoHandler for ComandoSetHandler {
     fn ejecutar(
         self: Box<Self>,
-        hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
+        bdd: Arc<Mutex<BaseDeDatos>>,
     ) -> ResultadoRedis {
-        (self.a_ejecutar)(&self.comando, hash_map)
+        (self.a_ejecutar)(&self.comando, bdd)
     }
 }
 #[allow(dead_code)]
@@ -37,9 +38,9 @@ pub fn es_comando_set(comando: &str) -> bool {
     comandos.iter().any(|&c| c == comando)
 }
 
-fn sadd(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
+fn sadd(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let (a_agregar, cantidad_ingresada) =
-        match hash_map.lock().unwrap().get(&comando[1]) {
+        match bdd.lock().unwrap().obtener_valor(&comando[1]) {
             Some(TipoRedis::Set(set)) => aggregar_al_set(&comando[2..], &mut set.clone()),
             None => aggregar_al_set(&comando[2..], &mut HashSet::new()),
             _ => return ResultadoRedis::Error(
@@ -47,10 +48,7 @@ fn sadd(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) ->
                     .to_string(),
             ),
         };
-    hash_map
-        .lock()
-        .unwrap()
-        .insert(comando[1].clone(), TipoRedis::Set(a_agregar));
+    bdd.lock().unwrap().guardar_valor(comando[1].clone(), TipoRedis::Set(a_agregar));
     ResultadoRedis::Int(cantidad_ingresada)
 }
 
@@ -65,8 +63,8 @@ fn aggregar_al_set(valores: &[String], set: &mut HashSet<String>) -> (HashSet<St
     (set.clone(), cantidad_ingresada)
 }
 
-fn scard(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
-    match hash_map.lock().unwrap().get(&comando[1]) {
+fn scard(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
         Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len()),
         None => ResultadoRedis::Int(0),
         _ => ResultadoRedis::Error(
@@ -76,11 +74,8 @@ fn scard(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -
     }
 }
 
-fn sismember(
-    comando: &[String],
-    hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
-) -> ResultadoRedis {
-    match hash_map.lock().unwrap().get(&comando[1]) {
+fn sismember(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
         Some(TipoRedis::Set(set)) => {
             ResultadoRedis::Int(if set.contains(&comando[2]) { 1 } else { 0 })
         }
@@ -92,11 +87,8 @@ fn sismember(
     }
 }
 
-fn smembers(
-    comando: &[String],
-    hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
-) -> ResultadoRedis {
-    match hash_map.lock().unwrap().get(&comando[1]) {
+fn smembers(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>)  -> ResultadoRedis {
+    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
         Some(TipoRedis::Set(set)) => {
             let mut vector = vec![];
             for valor in set.iter() {
@@ -112,9 +104,9 @@ fn smembers(
     }
 }
 
-fn srem(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
+fn srem(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let (a_agregar, cantidad_eliminada) =
-        match hash_map.lock().unwrap().get(&comando[1]) {
+        match bdd.lock().unwrap().obtener_valor(&comando[1]) {
             Some(TipoRedis::Set(set)) => eliminar_del_set(&comando[2..], &mut set.clone()),
             None => return ResultadoRedis::Int(0),
             _ => return ResultadoRedis::Error(
@@ -123,10 +115,7 @@ fn srem(comando: &[String], hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) ->
             ),
         };
 
-    hash_map
-        .lock()
-        .unwrap()
-        .insert(comando[1].clone(), TipoRedis::Set(a_agregar));
+    bdd.lock().unwrap().guardar_valor(comando[1].clone(), TipoRedis::Set(a_agregar));
     ResultadoRedis::Int(cantidad_eliminada)
 }
 
