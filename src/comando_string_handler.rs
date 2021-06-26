@@ -103,7 +103,6 @@ fn strlen(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::LinkedList;
 
     #[test]
     fn get_devuelve_el_valor_almacenado_en_el_hash() {
@@ -120,7 +119,7 @@ mod tests {
     #[test]
     fn get_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        hash.insert("miClave".to_string(), TipoRedis::Lista(vec![]));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(
@@ -186,7 +185,7 @@ mod tests {
     #[test]
     fn append_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        hash.insert("miClave".to_string(), TipoRedis::Lista(vec![]));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(
@@ -218,7 +217,7 @@ mod tests {
     #[test]
     fn getdel_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        hash.insert("miClave".to_string(), TipoRedis::Lista(vec![]));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(
@@ -242,7 +241,7 @@ mod tests {
     #[test]
     fn strlen_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        hash.insert("miClave".to_string(), TipoRedis::Lista(vec![]));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(

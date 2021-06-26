@@ -15,7 +15,7 @@ pub enum ResultadoRedis {
 #[derive(Debug, PartialEq)]
 pub enum TipoRedis {
     Str(String),
-    Lista(LinkedList<String>),
+    Lista(Vec<String>),
     Set(HashSet<String>),
 }
 

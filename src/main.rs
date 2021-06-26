@@ -1,7 +1,9 @@
 mod comando;
 mod comando_string_handler;
-mod BaseDeDatos;
 mod comando_key_handler;
+mod comando_list_handler;
+mod comando_info;
+mod BaseDeDatos;
 mod log_handler;
 mod parser;
 mod persistencia;

@@ -36,7 +36,7 @@ impl BaseDeDatos{
 
 	pub fn eliminar_clave(&mut self, clave:&str) -> usize {
 		match self.hashmap.remove(clave){
-			Some(valor) => 1,
+			Some(_) => 1,
 			None => 0,
 		}
 	}

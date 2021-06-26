@@ -70,7 +70,6 @@ fn exists(comando: &Vec<String>, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> Resu
 mod tests {
 	use std::collections::HashSet;
     use crate::comando::TipoRedis;
-    use std::collections::LinkedList;
 	use super::*;
 
     #[test]
@@ -104,7 +103,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new();    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
@@ -117,7 +116,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new();    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
@@ -130,7 +129,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new();    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
@@ -143,7 +142,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new();    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
@@ -156,7 +155,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new();    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
@@ -186,7 +185,7 @@ mod tests {
     fn tipo_devuelve_el_tipo_del_valor_almacenado_con_esa_clave(){
         let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("string".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("lista".to_string(),TipoRedis::Lista(LinkedList::new()));
+        data_base.guardar_valor("lista".to_string(),TipoRedis::Lista(vec![]));
         data_base.guardar_valor("set".to_string(),TipoRedis::Set(HashSet::new()));
 
         
