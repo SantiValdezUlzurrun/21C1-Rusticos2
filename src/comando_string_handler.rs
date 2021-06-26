@@ -1,5 +1,5 @@
-use crate::comando::{Comando, ComandoHandler, ResultadoRedis, TipoRedis};
-use std::collections::HashMap;
+use crate::comando::{Comando, ComandoHandler};
+use crate::base_de_datos::{BaseDeDatos, TipoRedis, ResultadoRedis};
 use std::sync::{Arc, Mutex};
 
 /*
@@ -31,70 +31,54 @@ impl ComandoStringHandler {
 impl ComandoHandler for ComandoStringHandler {
     fn ejecutar(
         self: Box<Self>,
-        hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
+        hash_map: Arc<Mutex<BaseDeDatos>>,
     ) -> ResultadoRedis {
         (self.a_ejecutar)(&self.comando, hash_map)
     }
 }
 
-pub fn es_comando_string(comando: &String) -> bool {
+pub fn es_comando_string(comando: &str) -> bool {
     let comandos = vec!["GET", "SET", "APPEND"];
     comandos.iter().any(|&c| c == comando)
 }
 
-fn get(comando: &Vec<String>, hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
-    match hash_map.lock().unwrap().get(&comando[1]) {
+fn get(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
         Some(TipoRedis::Str(valor)) => ResultadoRedis::BulkStr(valor.to_string()),
         _ => ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
     }
 }
 
-fn set(comando: &Vec<String>, hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>) -> ResultadoRedis {
-    hash_map
-        .lock()
-        .unwrap()
-        .insert(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
+fn set(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    bdd.lock().unwrap().guardar_valor(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
     ResultadoRedis::StrSimple("OK".to_string())
 }
 
-fn append(
-    comando: &Vec<String>,
-    hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
-) -> ResultadoRedis {
-    if hash_map.lock().unwrap().contains_key(&comando[1]) {
-        let valor = match get(comando, hash_map.clone()) {
+#[allow(dead_code)]
+fn append(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    if bdd.lock().unwrap().existe_clave(&comando[1]) {
+        let valor = match get(comando, bdd.clone()) {
             ResultadoRedis::BulkStr(valor) => valor + &comando[2],
             _ => return ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
         };
 
-        hash_map
-            .lock()
-            .unwrap()
-            .insert(comando[1].clone(), TipoRedis::Str(valor.clone()));
+        bdd.lock().unwrap()
+            .guardar_valor(comando[1].clone(), TipoRedis::Str(valor.clone()));
         return ResultadoRedis::Int(valor.len());
     };
-    hash_map
-        .lock()
-        .unwrap()
-        .insert(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
+    bdd.lock().unwrap().guardar_valor(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
     ResultadoRedis::Int(comando[2].len())
 }
-
-fn getdel(
-    comando: &Vec<String>,
-    hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
-) -> ResultadoRedis {
-    let hash_map_clon = Arc::clone(&hash_map);
-    let resultado = get(comando, hash_map_clon);
-    hash_map.lock().unwrap().remove(&comando[1]);
+#[allow(dead_code)]
+fn getdel(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let bdd_clon = Arc::clone(&bdd);
+    let resultado = get(comando, bdd_clon);
+    bdd.lock().unwrap().eliminar_clave(&comando[1]);
     resultado
 }
-
-fn strlen(
-    comando: &Vec<String>,
-    hash_map: Arc<Mutex<HashMap<String, TipoRedis>>>,
-) -> ResultadoRedis {
-    match hash_map.lock().unwrap().get(&comando[1]) {
+#[allow(dead_code)]
+fn strlen(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
         Some(TipoRedis::Str(valor)) => ResultadoRedis::Int(valor.len()),
         _ => ResultadoRedis::Error("StrLen error al obtener la clave".to_string()),
     }

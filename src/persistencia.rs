@@ -1,9 +1,14 @@
-use std::collections::LinkedList;
+use std::collections::{HashMap, LinkedList};
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
+use std::time::Duration;
+use std::thread;
+use std::sync::mpsc::{Receiver, Sender};
+
+use crate::base_de_datos::TipoRedis;
 
 const SEPARADOR: &str = "\\r\\n";
 const FORMATO_GET: &str = "*3\\r\\n$3\\r\\nSET\\r\\n";
@@ -11,10 +16,61 @@ const FORMATO_LPUSH: &str = "$4\\r\\nLPUSH\\r\\n";
 const ID_ARG: &str = "*";
 const ID_TAM_STR: &str = "$";
 
-pub enum TipoRedis {
-    Str(String),
-    List(LinkedList<String>),
+pub enum MensajePersistencia {
+    Info(HashMap<String, TipoRedis>),
+    Cerrar,
 }
+
+pub struct PersistidorHandler {
+    archivo: String,
+    intervalo : Duration,
+    receptor: Receiver<MensajePersistencia>,
+}
+
+impl PersistidorHandler {
+    pub fn new(archivo: String, intervalo: u64, receptor: Receiver<MensajePersistencia>) -> Self {
+        PersistidorHandler { 
+            archivo,
+            receptor,
+            intervalo: Duration::from_secs(intervalo),
+        }
+    }
+
+    pub fn persistir(&self) {
+        while let Ok(mensaje) = self.receptor.recv() {
+            match mensaje {
+                MensajePersistencia::Info(a_persistir) => {
+
+                    //persisto
+                    let mut vector: Vec<String> = vec![];
+                    for (key, val) in a_persistir.iter() {
+                        vector.push(guardar_clave_valor(key.to_string(), val));
+                    }
+                    guardar_en_archivo(&self.archivo, vector);
+
+                    thread::sleep(self.intervalo); 
+                }
+
+                MensajePersistencia::Cerrar => break,
+            };
+        }           
+    }
+}
+
+pub struct Persistidor {
+    persistidor: Sender<MensajePersistencia>,
+}
+
+impl Persistidor {
+    pub fn new(persistidor: Sender<MensajePersistencia>) -> Self {
+        Persistidor { persistidor }
+    }
+
+    pub fn persistir(&self, base_de_datos: HashMap<String, TipoRedis>) {
+        self.persistidor.send(MensajePersistencia::Info(base_de_datos)).unwrap();
+    }
+}
+
 
 fn guardar_elemento(elemento: &str) -> String {
     let len_elemento = elemento.len();
@@ -32,17 +88,18 @@ fn guardar_clave_valor(clave: String, valor: &TipoRedis) -> String {
             FORMATO_GET.to_string() + &guardar_elemento(&clave) + &guardar_elemento(&valor)
         }
 
-        TipoRedis::List(lista) => {
+        TipoRedis::Lista(lista) => {
             let mut string_comando =
                 guardar_cant_arg(&lista) + FORMATO_LPUSH + &guardar_elemento(&clave);
             for valor in lista.iter() {
                 string_comando += &guardar_elemento(valor);
             }
             string_comando
-        }
+        },
+        _ => String::new(),
     }
 }
-#[allow(dead_code)]
+
 fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) {
     let mut archivo = OpenOptions::new()
         .write(true)
@@ -56,19 +113,19 @@ fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) {
         }
     }
 }
-#[allow(dead_code)]
+
 fn cargar_en_vector(archivo: &str) -> Vec<String> {
     let mut vector: Vec<String> = vec![];
     let file = File::open(archivo).unwrap();
     let reader = BufReader::new(file);
 
-    for line in reader.lines() {
-        if let Ok(linea) = line {
-            vector.push(linea);
-        }
+    for linea in reader.lines().flatten() {
+        vector.push(linea);
     }
     vector
 }
+
+
 
 #[cfg(test)]
 mod tests {
@@ -106,16 +163,17 @@ mod tests {
         map.insert("UnaClave1", TipoRedis::Str("UnValor".to_string()));
         map.insert("UnaClave2", TipoRedis::Str("UnValor".to_string()));
 
-        let mut lista = TipoRedis::List(LinkedList::new());
+        let mut lista = TipoRedis::Lista(LinkedList::new());
 
         match lista {
-            TipoRedis::List(ref mut lista) => {
+            TipoRedis::Lista(ref mut lista) => {
                 lista.push_back("PRIMER_VALOR".to_string());
                 lista.push_back("SEGUNDO_VALOR".to_string());
                 lista.push_back("TERCER_VALOR".to_string());
-            }
+            },
 
             TipoRedis::Str(_) => {}
+            _ => {}
         }
 
         map.insert("milista", lista);

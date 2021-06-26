@@ -1,6 +1,5 @@
-use crate::comando::{ResultadoRedis, TipoRedis};
-use crate::BaseDeDatos::BaseDeDatos;
-use crate::comando::{Comando};
+use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
+use crate::comando::{Comando, ComandoHandler};
 use std::sync::{Arc, Mutex};
 
 
@@ -9,17 +8,46 @@ pub struct ComandoKeyHandler {
     a_ejecutar: Comando,
 }
 
+impl ComandoKeyHandler {
+    pub fn new(comando: Vec<String>) -> Self {
+        let a_ejecutar = match comando[0].as_str() {
+            "COPY" => copy,
+            "DEL" => del,
+            "EXISTS" => exists,
+            "RENAME" => rename,
+            _ => tipo,
+        };
+        ComandoKeyHandler {
+            comando,
+            a_ejecutar: Box::new(a_ejecutar),
+        }
+    }
+}
 
-fn copy(comando: &Vec<String>, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
-	match base_de_datos.lock().unwrap().copiar_valor(&comando[1],&comando[2]) {
-		Ok(_) => ResultadoRedis::Int(1),
-		Err(_) => return ResultadoRedis::Int(0),
+impl ComandoHandler for ComandoKeyHandler {
+    fn ejecutar(
+        self: Box<Self>,
+        bdd: Arc<Mutex<BaseDeDatos>>,
+    ) -> ResultadoRedis {
+        (self.a_ejecutar)(&self.comando, bdd)
+    }
+}
+
+pub fn es_comando_string(comando: &str) -> bool {
+    let comandos = vec!["COPY","DEL","EXISTS","RENAME", "TYPE"];
+    comandos.iter().any(|&c| c == comando)
+}
+
+fn copy(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
+	match bdd.lock().unwrap().copiar_valor(&comando[1],&comando[2]) {
+		Some(_) => ResultadoRedis::Int(1),
+		None => return ResultadoRedis::Int(0),
 	}
 }
 
-fn rename(comando: &Vec<String>, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
-    let clon = Arc::clone(&base_de_datos);
-    match copy(comando,base_de_datos) {
+fn rename(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
+    let clon = Arc::clone(&bdd);
+    match copy(comando,bdd) {
         ResultadoRedis::Error(_) => return ResultadoRedis::Error("ErrorRename clave no encontrada".to_string()),
         _ => {
 
@@ -30,16 +58,16 @@ fn rename(comando: &Vec<String>, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> Resu
     }
 }
 
-fn tipo(comando: &Vec<String>, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
-    match base_de_datos.lock().unwrap().obtener_valor(&comando[1]){
-        Ok(TipoRedis::Str(_)) => ResultadoRedis::BulkStr("string".to_string()),
-        Ok(TipoRedis::Lista(_)) => ResultadoRedis::BulkStr("lista".to_string()),
-        Ok(TipoRedis::Set(_)) => ResultadoRedis::BulkStr("set".to_string()),
+fn tipo(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
+    match bdd.lock().unwrap().obtener_valor(&comando[1]){
+        Some(TipoRedis::Str(_)) => ResultadoRedis::BulkStr("string".to_string()),
+        Some(TipoRedis::Lista(_)) => ResultadoRedis::BulkStr("lista".to_string()),
+        Some(TipoRedis::Set(_)) => ResultadoRedis::BulkStr("set".to_string()),
         _ =>  ResultadoRedis::BulkStr("none".to_string()),
     }
 }
 
-fn recorrer_y_ejecutar(comando: &Vec<String>, base_de_datos: Arc<Mutex<BaseDeDatos>>, funcion: Box<dyn Fn(&str)>) -> ResultadoRedis{
+fn recorrer_y_ejecutar(comando: &[String], base_de_datos: Arc<Mutex<BaseDeDatos>>, funcion: Box<dyn Fn(&str)>) -> ResultadoRedis{
     let mut claves_eliminadas = 0;
     let mut iterador = comando.iter();
     iterador.next();
@@ -54,13 +82,13 @@ fn recorrer_y_ejecutar(comando: &Vec<String>, base_de_datos: Arc<Mutex<BaseDeDat
     ResultadoRedis::Int(claves_eliminadas)
 }
 
-fn del(comando: &Vec<String>, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
-    let clon = Arc::clone(&base_de_datos);
-    recorrer_y_ejecutar(comando,base_de_datos, Box::new(move |clave| {clon.lock().unwrap().eliminar_clave(clave);}))
+fn del(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
+    let clon = Arc::clone(&bdd);
+    recorrer_y_ejecutar(comando,bdd, Box::new(move |clave| {clon.lock().unwrap().eliminar_clave(clave);}))
 }
 
-fn exists(comando: &Vec<String>, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
-    recorrer_y_ejecutar(comando,base_de_datos, Box::new(|_| {}))
+fn exists(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
+    recorrer_y_ejecutar(comando,bdd, Box::new(|_| {}))
 }
 
 
