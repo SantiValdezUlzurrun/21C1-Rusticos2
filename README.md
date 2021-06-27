@@ -8,7 +8,6 @@ Se presente emular, en la medida de lo posible, el proceso de desarrollo de la I
 
 - [Buzzone, Mauricio](https://github.com/MauricioBuzzone)
 - [Valdez Ulzurrun, Santiago Martin](https://github.com/SantiValdezUlzurrun)
-- [Hetrea, Joaquin](https://github.com/JoaquinHetrea)
 
 ### Corrector
 
