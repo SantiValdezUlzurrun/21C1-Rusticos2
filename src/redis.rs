@@ -1,12 +1,11 @@
-use crate::comando::crear_comando;
-use crate::comando::ResultadoRedis;
+use crate::base_de_datos::{BaseDeDatos, ResultadoRedis};
+use crate::comando::crear_comando_handler;
 use crate::log_handler::Mensaje;
 use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_respuesta;
 use crate::parser::Parser;
 use crate::Config;
 
-use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 use std::net::TcpListener;
@@ -36,7 +35,7 @@ impl fmt::Display for RedisError {
 
 pub struct Redis {
     direccion: String,
-    tabla: Arc<Mutex<HashMap<String, String>>>,
+    bdd: Arc<Mutex<BaseDeDatos>>,
     _verbose: bool,
     _timeout: u32,
     tx: Sender<Mensaje>,
@@ -55,7 +54,7 @@ impl Redis {
 
         Redis {
             direccion: config.host + ":" + config.port.as_str(),
-            tabla: Arc::new(Mutex::new(HashMap::new())),
+            bdd: Arc::new(Mutex::new(BaseDeDatos::new(config.dbfilename))),
             _verbose: config.verbose,
             _timeout: config.timeout,
             tx,
@@ -71,7 +70,7 @@ impl Redis {
         };
 
         for mut stream in listener.incoming().flatten() {
-            let clon_tabla = Arc::clone(&self.tabla);
+            let clon_tabla = Arc::clone(&self.bdd);
             let logger = Logger::new(self.tx.clone());
             let handle = thread::spawn(move || {
                 logger.log("Se conecto usario".to_string());
@@ -105,7 +104,7 @@ impl Drop for Redis {
 
 fn manejar_cliente(
     socket: &mut TcpStream,
-    tabla: Arc<Mutex<HashMap<String, String>>>,
+    tabla: Arc<Mutex<BaseDeDatos>>,
 ) -> Result<(), RedisError> {
     let socket_clon = match socket.try_clone() {
         Ok(sock) => sock,
@@ -135,12 +134,9 @@ fn manejar_cliente(
     Ok(())
 }
 
-fn manejar_comando(
-    entrada: Vec<String>,
-    tabla: Arc<Mutex<HashMap<String, String>>>,
-) -> ResultadoRedis {
-    let comando = crear_comando(&entrada);
-    comando.ejecutar(tabla)
+fn manejar_comando(entrada: Vec<String>, tabla: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let handler = crear_comando_handler(entrada);
+    handler.ejecutar(tabla)
 }
 
 fn cliente_envio_informacion(socket: &TcpStream) -> bool {
