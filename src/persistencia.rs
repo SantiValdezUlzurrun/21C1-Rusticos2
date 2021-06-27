@@ -4,9 +4,9 @@ use std::fs::OpenOptions;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
-use std::time::Duration;
-use std::thread;
 use std::sync::mpsc::{Receiver, Sender};
+use std::thread;
+use std::time::Duration;
 
 use crate::base_de_datos::TipoRedis;
 
@@ -23,13 +23,13 @@ pub enum MensajePersistencia {
 
 pub struct PersistidorHandler {
     archivo: String,
-    intervalo : Duration,
+    intervalo: Duration,
     receptor: Receiver<MensajePersistencia>,
 }
 
 impl PersistidorHandler {
     pub fn new(archivo: String, intervalo: u64, receptor: Receiver<MensajePersistencia>) -> Self {
-        PersistidorHandler { 
+        PersistidorHandler {
             archivo,
             receptor,
             intervalo: Duration::from_secs(intervalo),
@@ -40,7 +40,6 @@ impl PersistidorHandler {
         while let Ok(mensaje) = self.receptor.recv() {
             match mensaje {
                 MensajePersistencia::Info(a_persistir) => {
-
                     //persisto
                     let mut vector: Vec<String> = vec![];
                     for (key, val) in a_persistir.iter() {
@@ -48,12 +47,12 @@ impl PersistidorHandler {
                     }
                     guardar_en_archivo(&self.archivo, vector);
 
-                    thread::sleep(self.intervalo); 
+                    thread::sleep(self.intervalo);
                 }
 
                 MensajePersistencia::Cerrar => break,
             };
-        }           
+        }
     }
 }
 
@@ -67,10 +66,11 @@ impl Persistidor {
     }
 
     pub fn persistir(&self, base_de_datos: HashMap<String, TipoRedis>) {
-        self.persistidor.send(MensajePersistencia::Info(base_de_datos)).unwrap();
+        self.persistidor
+            .send(MensajePersistencia::Info(base_de_datos))
+            .unwrap();
     }
 }
-
 
 fn guardar_elemento(elemento: &str) -> String {
     let len_elemento = elemento.len();
@@ -95,7 +95,7 @@ fn guardar_clave_valor(clave: String, valor: &TipoRedis) -> String {
                 string_comando += &guardar_elemento(valor);
             }
             string_comando
-        },
+        }
         _ => String::new(),
     }
 }
@@ -114,6 +114,7 @@ fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) {
     }
 }
 
+#[allow(dead_code)]
 fn cargar_en_vector(archivo: &str) -> Vec<String> {
     let mut vector: Vec<String> = vec![];
     let file = File::open(archivo).unwrap();
@@ -124,8 +125,6 @@ fn cargar_en_vector(archivo: &str) -> Vec<String> {
     }
     vector
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -170,7 +169,7 @@ mod tests {
                 lista.push_back("PRIMER_VALOR".to_string());
                 lista.push_back("SEGUNDO_VALOR".to_string());
                 lista.push_back("TERCER_VALOR".to_string());
-            },
+            }
 
             TipoRedis::Str(_) => {}
             _ => {}

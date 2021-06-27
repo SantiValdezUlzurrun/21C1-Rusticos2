@@ -1,12 +1,11 @@
-use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
-use crate::comando::{crear_comando_handler};
+use crate::base_de_datos::{BaseDeDatos, ResultadoRedis};
+use crate::comando::crear_comando_handler;
 use crate::log_handler::Mensaje;
 use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_respuesta;
 use crate::parser::Parser;
 use crate::Config;
 
-use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 use std::net::TcpListener;
@@ -135,10 +134,7 @@ fn manejar_cliente(
     Ok(())
 }
 
-fn manejar_comando(
-    entrada: Vec<String>,
-    tabla: Arc<Mutex<BaseDeDatos>>,
-) -> ResultadoRedis {
+fn manejar_comando(entrada: Vec<String>, tabla: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let handler = crear_comando_handler(entrada);
     handler.ejecutar(tabla)
 }

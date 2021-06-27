@@ -1,5 +1,5 @@
+use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
 use crate::comando::{Comando, ComandoHandler};
-use crate::base_de_datos::{BaseDeDatos, TipoRedis, ResultadoRedis};
 use std::sync::{Arc, Mutex};
 
 /*
@@ -29,10 +29,7 @@ impl ComandoStringHandler {
 }
 
 impl ComandoHandler for ComandoStringHandler {
-    fn ejecutar(
-        self: Box<Self>,
-        hash_map: Arc<Mutex<BaseDeDatos>>,
-    ) -> ResultadoRedis {
+    fn ejecutar(self: Box<Self>, hash_map: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
         (self.a_ejecutar)(&self.comando, hash_map)
     }
 }
@@ -50,7 +47,9 @@ fn get(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
 }
 
 fn set(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    bdd.lock().unwrap().guardar_valor(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
+    bdd.lock()
+        .unwrap()
+        .guardar_valor(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
     ResultadoRedis::StrSimple("OK".to_string())
 }
 
@@ -62,11 +61,14 @@ fn append(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
             _ => return ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
         };
 
-        bdd.lock().unwrap()
+        bdd.lock()
+            .unwrap()
             .guardar_valor(comando[1].clone(), TipoRedis::Str(valor.clone()));
         return ResultadoRedis::Int(valor.len());
     };
-    bdd.lock().unwrap().guardar_valor(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
+    bdd.lock()
+        .unwrap()
+        .guardar_valor(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
     ResultadoRedis::Int(comando[2].len())
 }
 #[allow(dead_code)]
@@ -91,31 +93,31 @@ mod tests {
 
     #[test]
     fn get_devuelve_el_valor_almacenado_en_el_hash() {
-        let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(
             ResultadoRedis::BulkStr("miValor".to_string()),
-            get(&vector, Arc::new(Mutex::new(hash)))
+            get(&vector, Arc::new(Mutex::new(bdd)))
         );
     }
 
     #[test]
     fn get_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
-        let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(
             ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
-            get(&vector, Arc::new(Mutex::new(hash)))
+            get(&vector, Arc::new(Mutex::new(bdd)))
         );
     }
 
     #[test]
     fn set_almacena_un_valor_en_el_hash() {
-        let hash: HashMap<String, TipoRedis> = HashMap::new();
+        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
         let vector = vec![
             "get".to_string(),
             "miClave".to_string(),
@@ -124,15 +126,15 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::StrSimple("OK".to_string()),
-            set(&vector, Arc::new(Mutex::new(hash)))
+            set(&vector, Arc::new(Mutex::new(bdd)))
         );
     }
 
     #[test]
     fn append_agrega_el_string_enviado_al_final_del_string_guardado_con_la_misma_clave() {
-        let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
-        let ptr_hash = Arc::new(Mutex::new(hash));
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
+        let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
 
         let vector = vec![
@@ -150,8 +152,8 @@ mod tests {
 
     #[test]
     fn append_agrega_un_string_al_hash_porque_no_hay_un_elemento_guarado_con_esa_clave() {
-        let hash: HashMap<String, TipoRedis> = HashMap::new();
-        let ptr_hash = Arc::new(Mutex::new(hash));
+        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
 
         let vector = vec![
@@ -169,22 +171,22 @@ mod tests {
 
     #[test]
     fn append_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
-        let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(
             ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
-            append(&vector, Arc::new(Mutex::new(hash)))
+            append(&vector, Arc::new(Mutex::new(bdd)))
         );
     }
 
     #[test]
     fn getdel_devuelve_el_valor_almacenado_en_el_hash() {
-        let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
 
-        let ptr_hash = Arc::new(Mutex::new(hash));
+        let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash_clone = Arc::clone(&ptr_hash);
 
         let vector = vec!["get".to_string(), "miClave".to_string()];
@@ -201,37 +203,37 @@ mod tests {
 
     #[test]
     fn getdel_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
-        let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(
             ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
-            get(&vector, Arc::new(Mutex::new(hash)))
+            get(&vector, Arc::new(Mutex::new(bdd)))
         );
     }
 
     #[test]
     fn strlen_devuelve_el_valor_almacenado_en_el_hash() {
-        let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(
             ResultadoRedis::Int(7),
-            strlen(&vector, Arc::new(Mutex::new(hash)))
+            strlen(&vector, Arc::new(Mutex::new(bdd)))
         );
     }
 
     #[test]
     fn strlen_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
-        let mut hash: HashMap<String, TipoRedis> = HashMap::new();
-        hash.insert("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
         let vector = vec!["get".to_string(), "miClave".to_string()];
 
         assert_eq!(
             ResultadoRedis::Error("StrLen error al obtener la clave".to_string()),
-            strlen(&vector, Arc::new(Mutex::new(hash)))
+            strlen(&vector, Arc::new(Mutex::new(bdd)))
         );
     }
 }
