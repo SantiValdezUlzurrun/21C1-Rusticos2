@@ -126,11 +126,11 @@ mod tests {
     fn get_devuelve_el_valor_almacenado_en_el_hash() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
-        let vector = vec!["get".to_string(), "miClave".to_string()];
+        let comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(
             ResultadoRedis::BulkStr("miValor".to_string()),
-            get(&vector, Arc::new(Mutex::new(bdd)))
+            get(&comando, Arc::new(Mutex::new(bdd)))
         );
     }
 
@@ -138,26 +138,26 @@ mod tests {
     fn get_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
-        let vector = vec!["get".to_string(), "miClave".to_string()];
+        let comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(
             ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
-            get(&vector, Arc::new(Mutex::new(bdd)))
+            get(&comando, Arc::new(Mutex::new(bdd)))
         );
     }
 
     #[test]
     fn set_almacena_un_valor_en_el_hash() {
         let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
-        let vector = vec![
+        let comando = ComandoInfo::new(vec![
             "get".to_string(),
             "miClave".to_string(),
             "miValor".to_string(),
-        ];
+        ]);
 
         assert_eq!(
             ResultadoRedis::StrSimple("OK".to_string()),
-            set(&vector, Arc::new(Mutex::new(bdd)))
+            set(&comando, Arc::new(Mutex::new(bdd)))
         );
     }
 
@@ -168,16 +168,16 @@ mod tests {
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
 
-        let vector = vec![
+        let comando = ComandoInfo::new(vec![
             "APPEND".to_string(),
             "miClave".to_string(),
             "conAlgoAppendeado".to_string(),
-        ];
+        ]);
 
-        assert_eq!(ResultadoRedis::Int(24), append(&vector, ptr_hash1));
+        assert_eq!(ResultadoRedis::Int(24), append(&comando, ptr_hash1));
         assert_eq!(
             ResultadoRedis::BulkStr("miValorconAlgoAppendeado".to_string()),
-            get(&vector, ptr_hash)
+            get(&comando, ptr_hash)
         );
     }
 
@@ -187,16 +187,16 @@ mod tests {
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
 
-        let vector = vec![
+        let comando = ComandoInfo::new(vec![
             "APPEND".to_string(),
             "miClave".to_string(),
             "conAlgoAppendeado".to_string(),
-        ];
+        ]);
 
-        assert_eq!(ResultadoRedis::Int(17), append(&vector, ptr_hash1));
+        assert_eq!(ResultadoRedis::Int(17), append(&comando, ptr_hash1));
         assert_eq!(
             ResultadoRedis::BulkStr("conAlgoAppendeado".to_string()),
-            get(&vector, ptr_hash)
+            get(&comando, ptr_hash)
         );
     }
 
@@ -204,11 +204,11 @@ mod tests {
     fn append_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
-        let vector = vec!["get".to_string(), "miClave".to_string()];
+        let comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(
             ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
-            append(&vector, Arc::new(Mutex::new(bdd)))
+            append(&comando, Arc::new(Mutex::new(bdd)))
         );
     }
 
@@ -220,15 +220,15 @@ mod tests {
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash_clone = Arc::clone(&ptr_hash);
 
-        let vector = vec!["get".to_string(), "miClave".to_string()];
+        let comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(
             ResultadoRedis::BulkStr("miValor".to_string()),
-            getdel(&vector, ptr_hash_clone)
+            getdel(&comando, ptr_hash_clone)
         );
         assert_eq!(
             ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
-            getdel(&vector, ptr_hash)
+            getdel(&comando, ptr_hash)
         );
     }
 
@@ -236,11 +236,11 @@ mod tests {
     fn getdel_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
-        let vector = vec!["get".to_string(), "miClave".to_string()];
+        let comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(
             ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
-            get(&vector, Arc::new(Mutex::new(bdd)))
+            get(&comando, Arc::new(Mutex::new(bdd)))
         );
     }
 
@@ -248,11 +248,11 @@ mod tests {
     fn strlen_devuelve_el_valor_almacenado_en_el_hash() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
-        let vector = vec!["get".to_string(), "miClave".to_string()];
+        let comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(
             ResultadoRedis::Int(7),
-            strlen(&vector, Arc::new(Mutex::new(bdd)))
+            strlen(&comando, Arc::new(Mutex::new(bdd)))
         );
     }
 
@@ -260,11 +260,11 @@ mod tests {
     fn strlen_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
-        let vector = vec!["get".to_string(), "miClave".to_string()];
+        let comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(
             ResultadoRedis::Error("StrLen error al obtener la clave".to_string()),
-            strlen(&vector, Arc::new(Mutex::new(bdd)))
+            strlen(&comando, Arc::new(Mutex::new(bdd)))
         );
     }
 }
