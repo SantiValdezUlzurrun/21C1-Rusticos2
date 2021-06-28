@@ -1,6 +1,6 @@
 use std::option::Option;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ComandoInfo {
 	nombre: String,
 	clave: Option<String>,
@@ -10,10 +10,10 @@ pub struct ComandoInfo {
 
 impl ComandoInfo {
 	
-	pub fn new(comando_parseado: Vec<String>) -> Self{
+	pub fn new(mut comando_parseado: Vec<String>) -> Self{
 		if comando_parseado.len() == 0 {
 			return ComandoInfo{
-				nombre: comando_parseado[0],
+				nombre: comando_parseado[0].clone(),
 				clave: None,
 				parametros: vec![],
 				index: 0
@@ -21,21 +21,21 @@ impl ComandoInfo {
 		}
 		if comando_parseado.len() == 1 {
 			return ComandoInfo{
-				nombre: comando_parseado[0],
-				clave: Some(comando_parseado[1]),
+				nombre: comando_parseado[0].clone(),
+				clave: Some(comando_parseado[1].clone()),
 				parametros: vec![],
 				index: 0
 			};
 		}
 
-		let nombre = comando_parseado[0];
-		let clave = comando_parseado[1];
+		let _nombre = comando_parseado[0].clone();
+		let _clave = comando_parseado[1].clone();
 		comando_parseado.remove(0);
 		comando_parseado.remove(0);
 
 		ComandoInfo{
-			nombre: comando_parseado[0],
-			clave: Some(comando_parseado[1]),
+			nombre: comando_parseado[0].clone(),
+			clave: Some(comando_parseado[1].clone()),
 			parametros : comando_parseado,
 			index: 0
 		}
@@ -47,7 +47,7 @@ impl ComandoInfo {
 
 	}
 	pub fn get_clave(&self) -> Option<&str>{
-		match self.clave{
+		match &self.clave{
 			Some(clave) => Some(&clave),
 			None => None,
 		}
@@ -61,14 +61,14 @@ impl ComandoInfo {
 	}
 
 	pub fn descripcion(&self) -> String{
-		let descripcion = self.nombre + " ";
+		let mut descripcion = self.nombre.clone() + " ";
 
-		match self.clave{
+		match &self.clave{
 			Some(clave) => {
 				descripcion += &clave;
 
 				if 0 < self.parametros.len() {
-					let i = 0;
+					let mut i = 0;
 					while i < self.parametros.len(){
 						descripcion += " ";
 						descripcion += &self.parametros[i];

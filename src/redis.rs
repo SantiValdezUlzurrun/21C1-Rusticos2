@@ -81,13 +81,13 @@ impl Redis {
 
 
             let handle = thread::spawn(move || {
-                logger.log_coneccion(stream_addr,"Se conecto usario".to_string());
+                logger.log_coneccion(stream_addr.clone(),"Se conecto usario".to_string());
                 match manejar_cliente(&mut stream, clon_tabla, &logger) {
                     Ok(()) => (),
-                    Err(e) => manejar_error(&logger, e, stream_addr),
+                    Err(e) => manejar_error(&logger, e, stream_addr.clone()),
                 };
 
-                logger.log_coneccion(stream_addr,"se desconecto usuario".to_string());
+                logger.log_coneccion(stream_addr.clone(),"se desconecto usuario".to_string());
             });
             self.hilos_clientes.push(Some(handle));
         }
@@ -135,7 +135,7 @@ fn manejar_cliente(
                 Err(_) => return Err(RedisError::ConeccionError),
             };
 
-            logger.log_comando(socket_addr, comando);
+            logger.log_comando(socket_addr, comando.clone());
             
             let resultado = manejar_comando(comando, Arc::clone(&tabla));
 

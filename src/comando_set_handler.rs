@@ -36,7 +36,7 @@ pub fn es_comando_set(comando: &str) -> bool {
     comandos.iter().any(|&c| c == comando)
 }
 
-fn sadd(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn sadd(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     
     let clave = match comando.get_clave(){
         Some(clave) => clave,
@@ -58,7 +58,7 @@ fn sadd(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     ResultadoRedis::Int(cantidad_ingresada)
 }
 
-fn aggregar_al_set(comando: ComandoInfo, set: &mut HashSet<String>) -> (HashSet<String>, usize) {
+fn aggregar_al_set(comando: &ComandoInfo, set: &mut HashSet<String>) -> (HashSet<String>, usize) {
     let mut cantidad_ingresada = 0;
 
     while let Some(parametro) = comando.get_parametro() {
@@ -71,7 +71,7 @@ fn aggregar_al_set(comando: ComandoInfo, set: &mut HashSet<String>) -> (HashSet<
     (set.clone(), cantidad_ingresada)
 }
 
-fn scard(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn scard(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave(){
         Some(clave) => clave,
         None => {return ResultadoRedis::Error("Clave no encontrada".to_string())}
@@ -87,7 +87,7 @@ fn scard(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     }
 }
 
-fn sismember(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn sismember(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave(){
         Some(clave) => clave,
         None => {return ResultadoRedis::Error("Clave no encontrada".to_string())}
@@ -109,7 +109,7 @@ fn sismember(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
     }
 }
 
-fn smembers(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn smembers(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave(){
         Some(clave) => clave,
         None => {return ResultadoRedis::Error("Clave no encontrada".to_string())}
@@ -131,7 +131,7 @@ fn smembers(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
     }
 }
 
-fn srem(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn srem(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     
     let clave = match comando.get_clave(){
         Some(clave) => clave,
@@ -154,7 +154,7 @@ fn srem(comando: ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     ResultadoRedis::Int(cantidad_eliminada)
 }
 
-fn eliminar_del_set(comando: ComandoInfo, set: &mut HashSet<String>) -> (HashSet<String>, usize) {
+fn eliminar_del_set(comando: &ComandoInfo, set: &mut HashSet<String>) -> (HashSet<String>, usize) {
     let mut cantidad_eliminada = 0;
     
     while let Some(parametro) = comando.get_parametro() {
