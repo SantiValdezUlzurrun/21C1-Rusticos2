@@ -32,9 +32,24 @@ impl LogHandler {
         while let Ok(mensaje) = self.receptor.recv() {
             match mensaje {
                 Mensaje::InfoComando((addr,comando_info)) => {
-                    let a_logear = addr.to_string() +" "+ &comando_info.descripcion();
+                    let a_logear = addr +" "+ &comando_info.descripcion();
 
                     if let Err(e) = writeln!(archivo, "{}", a_logear.as_str()) {
+                        println!("{:?}", e);
+                    }
+                }
+                Mensaje::InfoError((addr,error)) => {
+
+                    let a_logear = addr +" "+ &error.to_string();
+                     if let Err(e) = writeln!(archivo, "{}", a_logear.as_str()) {
+                        println!("{:?}", e);
+                    }
+                }
+
+                Mensaje::InfoConeccion((addr,mensaje)) => {
+
+                    let a_logear = addr +" "+ &mensaje;
+                     if let Err(e) = writeln!(archivo, "{}", a_logear.as_str()) {
                         println!("{:?}", e);
                     }
                 }
