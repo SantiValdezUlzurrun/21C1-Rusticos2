@@ -1,16 +1,17 @@
+use crate::comando_info::ComandoInfo;
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
 use crate::comando::{Comando, ComandoHandler};
 use std::sync::{Arc, Mutex};
 
 
 pub struct ComandoKeyHandler {
-    comando: Vec<String>,
+    comando: ComandoInfo,
     a_ejecutar: Comando,
 }
 
 impl ComandoKeyHandler {
-    pub fn new(comando: Vec<String>) -> Self {
-        let a_ejecutar = match comando[0].as_str() {
+    pub fn new(comando: ComandoInfo) -> Self {
+        let a_ejecutar = match comando.get_nombre() {
             "COPY" => copy,
             "DEL" => del,
             "EXISTS" => exists,

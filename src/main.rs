@@ -5,7 +5,6 @@ mod base_de_datos;
 mod comando_key_handler;
 mod comando_list_handler;
 mod comando_info;
-mod BaseDeDatos;
 mod log_handler;
 mod parser;
 mod persistencia;

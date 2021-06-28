@@ -1,22 +1,11 @@
+use crate::comando_info::ComandoInfo;
+use crate::comando_set_handler::es_comando_set;
+use crate::comando_set_handler::ComandoSetHandler;
+use crate::comando_key_handler::ComandoKeyHandler;
 use std::sync::{Arc, Mutex};
 
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis};
 use crate::comando_string_handler::{es_comando_string, ComandoStringHandler};
-
-#[derive(Debug, PartialEq)]
-pub enum ResultadoRedis {
-    StrSimple(String),
-    BulkStr(String),
-    Int(usize),
-    Vector(Vec<ResultadoRedis>),
-    Error(String),
-}
-#[derive(Debug, PartialEq)]
-pub enum TipoRedis {
-    Str(String),
-    Lista(Vec<String>),
-    Set(HashSet<String>),
-}
 
 
 pub trait ComandoHandler {
@@ -26,10 +15,10 @@ pub trait ComandoHandler {
     ) -> ResultadoRedis;
 }
 
-pub fn crear_comando_handler(comando: Vec<String>) -> Box<dyn ComandoHandler> {
-    if es_comando_string(&comando[0]) {
+pub fn crear_comando_handler(comando: ComandoInfo) -> Box<dyn ComandoHandler> {
+    if es_comando_string(comando.get_nombre()) {
         return Box::new(ComandoStringHandler::new(comando));
-    } else if es_comando_set(&comando[0]) {
+    } else if es_comando_set(comando.get_nombre()) {
         return Box::new(ComandoSetHandler::new(comando));
     }
     return Box::new(ComandoKeyHandler::new(comando));
