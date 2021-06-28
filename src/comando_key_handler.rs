@@ -36,29 +36,46 @@ pub fn es_comando_key(comando: &str) -> bool {
     comandos.iter().any(|&c| c == comando)
 }
 
-fn copy(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    match bdd.lock().unwrap().copiar_valor(&comando[1], &comando[2]) {
+fn copy(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+    let parametro = match comando.get_parametro() {
+        Some(p) => p,
+        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string()),
+    };
+    match bdd.lock().unwrap().copiar_valor(clave, parametro) {
         Some(_) => ResultadoRedis::Int(1),
         None => ResultadoRedis::Int(0),
     }
 }
 
-fn rename(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn rename(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c.to_string(),
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
     let clon = Arc::clone(&bdd);
     match copy(comando, bdd) {
         ResultadoRedis::Error(_) => {
             ResultadoRedis::Error("ErrorRename clave no encontrada".to_string())
         }
         _ => {
-            let vector = vec!["rename".to_string(), comando[1].clone()];
-            del(&vector, clon);
+            let vector = vec!["rename".to_string(), clave];
+            let comando = ComandoInfo::new(vector);
+            del(&comando, clon);
             ResultadoRedis::StrSimple("Ok".to_string())
         }
     }
 }
 
-fn tipo(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
+fn tipo(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+    match bdd.lock().unwrap().obtener_valor(clave) {
         Some(TipoRedis::Str(_)) => ResultadoRedis::BulkStr("string".to_string()),
         Some(TipoRedis::Lista(_)) => ResultadoRedis::BulkStr("lista".to_string()),
         Some(TipoRedis::Set(_)) => ResultadoRedis::BulkStr("set".to_string()),
@@ -67,15 +84,13 @@ fn tipo(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
 }
 
 fn recorrer_y_ejecutar(
-    comando: &[String],
+    comando: &ComandoInfo,
     base_de_datos: Arc<Mutex<BaseDeDatos>>,
     funcion: Box<dyn Fn(&str)>,
 ) -> ResultadoRedis {
-    let mut claves_eliminadas = 0;
-    let mut iterador = comando.iter();
-    iterador.next();
+    let mut claves_eliminadas = 0; 
 
-    for clave in iterador {
+    while let Some(clave) = comando.get_parametro() {
         if base_de_datos.lock().unwrap().existe_clave(clave) {
             (funcion)(clave);
             claves_eliminadas += 1;
@@ -84,7 +99,7 @@ fn recorrer_y_ejecutar(
     ResultadoRedis::Int(claves_eliminadas)
 }
 
-fn del(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn del(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clon = Arc::clone(&bdd);
     recorrer_y_ejecutar(
         comando,
@@ -95,7 +110,7 @@ fn del(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     )
 }
 
-fn exists(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn exists(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     recorrer_y_ejecutar(comando, bdd, Box::new(|_| {}))
 }
 

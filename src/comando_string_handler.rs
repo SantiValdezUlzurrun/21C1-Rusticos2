@@ -75,7 +75,7 @@ fn append(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     };
     let parametro = match comando.get_parametro() {
-        Some(p) => p.to_string(),
+        Some(p) => p,
         None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string()),
     };
     if bdd.lock().unwrap().existe_clave(clave) {
@@ -86,24 +86,32 @@ fn append(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis
 
         bdd.lock()
             .unwrap()
-            .guardar_valor(, TipoRedis::Str(valor.clone()));
+            .guardar_valor(clave.to_string(), TipoRedis::Str(valor.clone()));
         return ResultadoRedis::Int(valor.len());
     };
     bdd.lock()
         .unwrap()
-        .guardar_valor(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
-    ResultadoRedis::Int(comando[2].len())
+        .guardar_valor(clave.to_string(), TipoRedis::Str(parametro.to_string()));
+    ResultadoRedis::Int(parametro.len())
 }
 #[allow(dead_code)]
-fn getdel(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn getdel(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
     let bdd_clon = Arc::clone(&bdd);
     let resultado = get(comando, bdd_clon);
-    bdd.lock().unwrap().eliminar_clave(&comando[1]);
+    bdd.lock().unwrap().eliminar_clave(&clave);
     resultado
 }
 #[allow(dead_code)]
-fn strlen(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
+fn strlen(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+    match bdd.lock().unwrap().obtener_valor(clave) {
         Some(TipoRedis::Str(valor)) => ResultadoRedis::Int(valor.len()),
         _ => ResultadoRedis::Error("StrLen error al obtener la clave".to_string()),
     }
