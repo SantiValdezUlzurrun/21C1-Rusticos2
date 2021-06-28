@@ -183,7 +183,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = sadd(comando, Arc::clone(&h));
+        let resultado = sadd(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(1), resultado,);
 
@@ -209,8 +209,8 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        sadd(comando, Arc::clone(&h));
-        let resultado = sadd(comando, Arc::clone(&h));
+        sadd(&comando, Arc::clone(&h));
+        let resultado = sadd(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(0), resultado,);
     }
@@ -230,7 +230,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = sadd(comando, Arc::clone(&h));
+        let resultado = sadd(&comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(
@@ -249,7 +249,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = scard(comando, Arc::clone(&h));
+        let resultado = scard(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(0), resultado,);
     }
@@ -266,7 +266,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = scard(comando, Arc::clone(&h));
+        let resultado = scard(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(2), resultado);
     }
@@ -282,7 +282,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = scard(comando, Arc::clone(&h));
+        let resultado = scard(&comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(
@@ -305,7 +305,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = sismember(comando, Arc::clone(&h));
+        let resultado = sismember(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(0), resultado,);
     }
@@ -327,7 +327,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = sismember(comando, Arc::clone(&h));
+        let resultado = sismember(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(1), resultado);
     }
@@ -347,7 +347,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = sismember(comando, Arc::clone(&h));
+        let resultado = sismember(&comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(
@@ -365,7 +365,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = smembers(comando, Arc::clone(&h));
+        let resultado = smembers(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Vector(vec![]), resultado);
     }
@@ -381,7 +381,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = smembers(comando, Arc::clone(&h));
+        let resultado = smembers(&comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(
@@ -404,7 +404,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = srem(comando, Arc::clone(&h));
+        let resultado = srem(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(0), resultado,);
     }
@@ -427,7 +427,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = srem(comando, Arc::clone(&h));
+        let resultado = srem(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(1), resultado,);
 
@@ -461,7 +461,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = srem(comando, Arc::clone(&h));
+        let resultado = srem(&comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(1), resultado,);
 
@@ -491,7 +491,7 @@ mod tests {
 
         let h = Arc::new(Mutex::new(bdd));
         let comando = ComandoInfo::new(vector);
-        let resultado = srem(comando, Arc::clone(&h));
+        let resultado = srem(&comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(

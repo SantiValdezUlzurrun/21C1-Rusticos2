@@ -135,6 +135,7 @@ mod tests {
             "clave".to_string(),
             "otra_clave".to_string(),
         ];
+        let comando = ComandoInfo::new(comando);
         copy(&comando, ptr_arc);
 
         assert_eq!(
@@ -157,72 +158,78 @@ mod tests {
             "clave".to_string(),
             "otra_clave".to_string(),
         ];
-        assert_eq!(copy(&comando, ptr_arc), ResultadoRedis::Int(0));
+        let comando_info = ComandoInfo::new(comando);
+        assert_eq!(copy(&comando_info, ptr_arc), ResultadoRedis::Int(0));
     }
 
     #[test]
     fn del_elimina_las_claves_guardadas_en_la_base_de_datos(){
-        let mut data_base = BaseDeDatos::new();    
+        let mut data_base = BaseDeDatos::new("eliminame".to_string());    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
         let comando = vec!["del".to_string(),"1".to_string(),"2".to_string(),"3".to_string(),"8".to_string()];
-        assert_eq!(ResultadoRedis::Int(3),del(&comando, Arc::new(Mutex::new(data_base))));
+        let comando_info = ComandoInfo::new(comando);
+        assert_eq!(ResultadoRedis::Int(3),del(&comando_info, Arc::new(Mutex::new(data_base))));
     }
 
     #[test]
     fn del_trata_de_elimina_las_claves_que_no_estan_guardadas_en_la_base_de_datos(){
-        let mut data_base = BaseDeDatos::new();    
+        let mut data_base = BaseDeDatos::new("ruta".to_string());    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
         let comando = vec!["del".to_string(),"6".to_string(),"7".to_string(),"8".to_string(),"8".to_string()];
-        assert_eq!(ResultadoRedis::Int(0),del(&comando, Arc::new(Mutex::new(data_base))));
+        let comando_info = ComandoInfo::new(comando);
+        assert_eq!(ResultadoRedis::Int(0),del(&comando_info, Arc::new(Mutex::new(data_base))));
     }
 
     #[test]
     fn del_elimina_las_claves_repetidas_que_de_la_base_de_datos(){
-        let mut data_base = BaseDeDatos::new();    
+        let mut data_base = BaseDeDatos::new("ruta".to_string());    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
         let comando = vec!["del".to_string(),"1".to_string(),"1".to_string(),"3".to_string(),"4".to_string()];
-        assert_eq!(ResultadoRedis::Int(3),del(&comando, Arc::new(Mutex::new(data_base))));
+        let comando_info = ComandoInfo::new(comando);
+        assert_eq!(ResultadoRedis::Int(3),del(&comando_info, Arc::new(Mutex::new(data_base))));
     }
 
     #[test]
     fn existis_chequea_las_claves_guardadas_en_la_base_de_datos(){
-        let mut data_base = BaseDeDatos::new();    
+        let mut data_base = BaseDeDatos::new("ruta".to_string());    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
         let comando = vec!["del".to_string(),"1".to_string(),"2".to_string(),"3".to_string(),"8".to_string()];
-        assert_eq!(ResultadoRedis::Int(3),exists(&comando, Arc::new(Mutex::new(data_base))));
+        let comando_info = ComandoInfo::new(comando);
+        assert_eq!(ResultadoRedis::Int(3),exists(&comando_info, Arc::new(Mutex::new(data_base))));
     } 
 
     #[test]
     fn existis_chequea_las_claves_repetidas_que_de_la_base_de_datos(){
-        let mut data_base = BaseDeDatos::new();    
+        let mut data_base = BaseDeDatos::new("ruta".to_string());    
         data_base.guardar_valor("1".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(vec![]));    
+        data_base.guardar_valor("3".to_string(),TipoRedis::Lista(LinkedList::new()));    
         data_base.guardar_valor("4".to_string(),TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(),TipoRedis::Str("valor".to_string()));
     
         let comando = vec!["del".to_string(),"1".to_string(),"1".to_string(),"3".to_string(),"4".to_string()];
-        assert_eq!(ResultadoRedis::Int(3),del(&comando, Arc::new(Mutex::new(data_base))));
+        let comando_info = ComandoInfo::new(comando);
+        assert_eq!(ResultadoRedis::Int(3),del(&comando_info, Arc::new(Mutex::new(data_base))));
     }   
 
     #[test]
@@ -238,7 +245,8 @@ mod tests {
             "clave".to_string(),
             "otra_clave".to_string(),
         ];
-        rename(&comando, ptr_arc);
+        let comando_info = ComandoInfo::new(comando);
+        rename(&comando_info, ptr_arc);
 
         assert!(arc_clone.lock().unwrap().existe_clave("otra_clave"));
         assert_eq!(
@@ -254,9 +262,9 @@ mod tests {
 
     #[test]
     fn tipo_devuelve_el_tipo_del_valor_almacenado_con_esa_clave(){
-        let mut data_base = BaseDeDatos::new();
+        let mut data_base = BaseDeDatos::new("ruta".to_string());
         data_base.guardar_valor("string".to_string(),TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("lista".to_string(),TipoRedis::Lista(vec![]));
+        data_base.guardar_valor("lista".to_string(),TipoRedis::Lista(LinkedList::new()));
         data_base.guardar_valor("set".to_string(),TipoRedis::Set(HashSet::new()));
 
         let ptr1 = Arc::new(Mutex::new(data_base));
@@ -269,20 +277,25 @@ mod tests {
         let vec3 = vec!["type".to_string(), "set".to_string()];
         let vec4 = vec!["type".to_string(), "clave".to_string()];
 
+        let comando_info1 = ComandoInfo::new(vec1);
+        let comando_info2 = ComandoInfo::new(vec2);
+        let comando_info3 = ComandoInfo::new(vec3);
+        let comando_info4 = ComandoInfo::new(vec4);
+
         assert_eq!(
-            tipo(&vec1, ptr1),
+            tipo(&comando_info1, ptr1),
             ResultadoRedis::BulkStr("string".to_string())
         );
         assert_eq!(
-            tipo(&vec2, ptr2),
+            tipo(&comando_info2, ptr2),
             ResultadoRedis::BulkStr("lista".to_string())
         );
         assert_eq!(
-            tipo(&vec3, ptr3),
+            tipo(&comando_info3, ptr3),
             ResultadoRedis::BulkStr("set".to_string())
         );
         assert_eq!(
-            tipo(&vec4, ptr4),
+            tipo(&comando_info4, ptr4),
             ResultadoRedis::BulkStr("none".to_string())
         );
     }
