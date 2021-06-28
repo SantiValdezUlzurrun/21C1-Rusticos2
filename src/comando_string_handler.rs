@@ -1,5 +1,6 @@
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
 use crate::comando::{Comando, ComandoHandler};
+use crate::comando_info::ComandoInfo;
 use std::sync::{Arc, Mutex};
 
 /*
@@ -11,13 +12,13 @@ Comando Lista faltantes:
 + mset
 */
 pub struct ComandoStringHandler {
-    comando: Vec<String>,
+    comando: ComandoInfo,
     a_ejecutar: Comando,
 }
 
 impl ComandoStringHandler {
-    pub fn new(comando: Vec<String>) -> Self {
-        let a_ejecutar = match comando[0].as_str() {
+    pub fn new(comando: ComandoInfo) -> Self {
+        let a_ejecutar = match comando.get_nombre() {
             "GET" => get,
             _ => set,
         };
@@ -39,31 +40,53 @@ pub fn es_comando_string(comando: &str) -> bool {
     comandos.iter().any(|&c| c == comando)
 }
 
-fn get(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
+fn get(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+
+    match bdd.lock().unwrap().obtener_valor(clave) {
         Some(TipoRedis::Str(valor)) => ResultadoRedis::BulkStr(valor.to_string()),
         _ => ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
     }
 }
 
-fn set(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn set(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c.to_string(),
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+    let parametro = match comando.get_parametro() {
+        Some(p) => p.to_string(),
+        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string()),
+    };
+
     bdd.lock()
         .unwrap()
-        .guardar_valor(comando[1].clone(), TipoRedis::Str(comando[2].clone()));
+        .guardar_valor(clave, TipoRedis::Str(parametro));
     ResultadoRedis::StrSimple("OK".to_string())
 }
 
 #[allow(dead_code)]
-fn append(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    if bdd.lock().unwrap().existe_clave(&comando[1]) {
+fn append(comando: &ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+    let parametro = match comando.get_parametro() {
+        Some(p) => p.to_string(),
+        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string()),
+    };
+    if bdd.lock().unwrap().existe_clave(clave) {
         let valor = match get(comando, bdd.clone()) {
-            ResultadoRedis::BulkStr(valor) => valor + &comando[2],
+            ResultadoRedis::BulkStr(valor) => valor + parametro,
             _ => return ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
         };
 
         bdd.lock()
             .unwrap()
-            .guardar_valor(comando[1].clone(), TipoRedis::Str(valor.clone()));
+            .guardar_valor(, TipoRedis::Str(valor.clone()));
         return ResultadoRedis::Int(valor.len());
     };
     bdd.lock()
@@ -88,8 +111,8 @@ fn strlen(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::LinkedList;
+    use super::*;
 
     #[test]
     fn get_devuelve_el_valor_almacenado_en_el_hash() {

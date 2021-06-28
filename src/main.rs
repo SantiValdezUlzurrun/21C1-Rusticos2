@@ -3,6 +3,8 @@ mod comando;
 mod comando_key_handler;
 mod comando_set_handler;
 mod comando_string_handler;
+mod comando_list_handler;
+mod comando_info;
 mod log_handler;
 mod parser;
 mod persistencia;
