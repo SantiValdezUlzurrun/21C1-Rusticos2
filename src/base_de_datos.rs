@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn base_de_datos_devuelve_una_copia_de_un_elemento_almacenado() {
-        let mut data_base = BaseDeDatos::new("eliminame".to_string());
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
 
         let valor = data_base.obtener_valor("clave");
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn base_de_datos_elimina_valor_almacenado() {
-        let mut data_base = BaseDeDatos::new("eliminame".to_string());
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
 
         assert!(data_base.existe_clave("clave"));

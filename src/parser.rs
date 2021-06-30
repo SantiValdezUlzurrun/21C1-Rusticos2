@@ -1,5 +1,5 @@
-use crate::comando_info::ComandoInfo;
 use crate::base_de_datos::ResultadoRedis;
+use crate::comando_info::ComandoInfo;
 use std::io::{BufRead, BufReader, Read};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -85,8 +85,8 @@ mod tests {
     fn cuando_se_recibe_un_mensaje_de_ping_este_se_parsea_y_se_devuelve_el_comando_correcto() {
         let stream = "*1\r\n$4\r\nPING\r\n".as_bytes();
         let parser = Parser::new(stream);
-        let resultado = parser.parsear_stream().unwrap();
-        assert_eq!(resultado.get_nombre(), "PING");
+        let mut resultado = parser.parsear_stream().unwrap();
+        assert_eq!(resultado.get_nombre(), "PING".to_string());
         assert_eq!(resultado.get_clave(), None);
         assert_eq!(resultado.get_parametro(), None);
     }
@@ -95,9 +95,9 @@ mod tests {
     fn cuando_se_recibe_un_mensaje_de_llen_este_se_parsea_y_se_devuelve_el_comando_correcto() {
         let stream = "*2\r\n$4\r\nLLEN\r\n$6\r\nmylist\r\n".as_bytes();
         let parser = Parser::new(stream);
-        let resultado = parser.parsear_stream().unwrap();
-        assert_eq!(resultado.get_nombre(), "LLEN");
-        assert_eq!(resultado.get_clave(), Some("mylist"));
+        let mut resultado = parser.parsear_stream().unwrap();
+        assert_eq!(resultado.get_nombre(), "LLEN".to_string());
+        assert_eq!(resultado.get_clave(), Some("mylist".to_string()));
         assert_eq!(resultado.get_parametro(), None);
     }
 
@@ -105,16 +105,15 @@ mod tests {
     fn cuando_se_recibe_un_mensaje_de_sort_este_se_parsea_y_se_devuelve_el_comando_correcto() {
         let stream = "*7\r\n$4\r\nSORT\r\n$6\r\nmylist\r\n$5\r\nLIMIT\r\n$1\r\n0\r\n$1\r\n5\r\n$5\r\nALPHA\r\n$4\r\nDESC\r\n".as_bytes();
         let parser = Parser::new(stream);
-        let resultado = parser.parsear_stream().unwrap();
-        let e: Vec<&str> = vec!["SORT", "mylist", "LIMIT", "0", "5", "ALPHA", "DESC"];
-        
-        assert_eq!(resultado.get_nombre(), "SORT");
-        assert_eq!(resultado.get_clave(), Some("mylist"));
-        assert_eq!(resultado.get_parametro(), Some("LIMIT"));
-        assert_eq!(resultado.get_parametro(), Some("0"));
-        assert_eq!(resultado.get_parametro(), Some("5"));
-        assert_eq!(resultado.get_parametro(), Some("ALPHA"));
-        assert_eq!(resultado.get_parametro(), Some("DESC"));
+        let mut resultado = parser.parsear_stream().unwrap();
+
+        assert_eq!(resultado.get_nombre(), "SORT".to_string());
+        assert_eq!(resultado.get_clave(), Some("mylist".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("LIMIT".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("0".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("5".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("ALPHA".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("DESC".to_string()));
     }
 
     #[test]
