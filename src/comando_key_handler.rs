@@ -122,7 +122,6 @@ mod tests {
     use super::*;
     use crate::base_de_datos::TipoRedis;
     use std::collections::HashSet;
-    use std::collections::LinkedList;
 
     #[test]
     fn copy_copia_el_valor_de_una_clave_en_otra() {
@@ -169,7 +168,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(LinkedList::new()));
+        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
         data_base.guardar_valor("4".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(), TipoRedis::Str("valor".to_string()));
 
@@ -192,7 +191,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(LinkedList::new()));
+        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
         data_base.guardar_valor("4".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(), TipoRedis::Str("valor".to_string()));
 
@@ -215,7 +214,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(LinkedList::new()));
+        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
         data_base.guardar_valor("4".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(), TipoRedis::Str("valor".to_string()));
 
@@ -238,7 +237,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(LinkedList::new()));
+        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
         data_base.guardar_valor("4".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(), TipoRedis::Str("valor".to_string()));
 
@@ -261,7 +260,7 @@ mod tests {
         let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(LinkedList::new()));
+        data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
         data_base.guardar_valor("4".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("5".to_string(), TipoRedis::Str("valor".to_string()));
 
@@ -311,7 +310,7 @@ mod tests {
     fn tipo_devuelve_el_tipo_del_valor_almacenado_con_esa_clave() {
         let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
         data_base.guardar_valor("string".to_string(), TipoRedis::Str("valor".to_string()));
-        data_base.guardar_valor("lista".to_string(), TipoRedis::Lista(LinkedList::new()));
+        data_base.guardar_valor("lista".to_string(), TipoRedis::Lista(Vec::new()));
         data_base.guardar_valor("set".to_string(), TipoRedis::Set(HashSet::new()));
 
         let ptr1 = Arc::new(Mutex::new(data_base));
