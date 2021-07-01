@@ -1,4 +1,5 @@
 use crate::base_de_datos::ResultadoRedis;
+use crate::comando_info::ComandoInfo;
 use std::io::{BufRead, BufReader, Read};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -18,7 +19,7 @@ impl<R: Read> Parser<R> {
         }
     }
 
-    pub fn parsear_stream(self) -> Result<Vec<String>, ParserError> {
+    pub fn parsear_stream(self) -> Result<ComandoInfo, ParserError> {
         let mut lineas = self.lector.lines();
 
         let primer_valor = match lineas.next() {
@@ -45,11 +46,11 @@ impl<R: Read> Parser<R> {
                 }
                 comando.push(argumento);
                 if comando.len() == capacidad as usize {
-                    return Ok(comando);
+                    return Ok(ComandoInfo::new(comando));
                 }
             }
         }
-        Ok(comando)
+        Ok(ComandoInfo::new(comando))
     }
 }
 pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
@@ -84,26 +85,35 @@ mod tests {
     fn cuando_se_recibe_un_mensaje_de_ping_este_se_parsea_y_se_devuelve_el_comando_correcto() {
         let stream = "*1\r\n$4\r\nPING\r\n".as_bytes();
         let parser = Parser::new(stream);
-        let resultado: Vec<String> = parser.parsear_stream().unwrap();
-        assert_eq!(resultado, vec!("PING".to_string()));
+        let mut resultado = parser.parsear_stream().unwrap();
+        assert_eq!(resultado.get_nombre(), "PING".to_string());
+        assert_eq!(resultado.get_clave(), None);
+        assert_eq!(resultado.get_parametro(), None);
     }
 
     #[test]
     fn cuando_se_recibe_un_mensaje_de_llen_este_se_parsea_y_se_devuelve_el_comando_correcto() {
         let stream = "*2\r\n$4\r\nLLEN\r\n$6\r\nmylist\r\n".as_bytes();
         let parser = Parser::new(stream);
-        let resultado: Vec<String> = parser.parsear_stream().unwrap();
-        assert_eq!(resultado, vec!("LLEN".to_string(), "mylist".to_string()));
+        let mut resultado = parser.parsear_stream().unwrap();
+        assert_eq!(resultado.get_nombre(), "LLEN".to_string());
+        assert_eq!(resultado.get_clave(), Some("mylist".to_string()));
+        assert_eq!(resultado.get_parametro(), None);
     }
 
     #[test]
     fn cuando_se_recibe_un_mensaje_de_sort_este_se_parsea_y_se_devuelve_el_comando_correcto() {
         let stream = "*7\r\n$4\r\nSORT\r\n$6\r\nmylist\r\n$5\r\nLIMIT\r\n$1\r\n0\r\n$1\r\n5\r\n$5\r\nALPHA\r\n$4\r\nDESC\r\n".as_bytes();
         let parser = Parser::new(stream);
-        let resultado: Vec<String> = parser.parsear_stream().unwrap();
-        let e: Vec<&str> = vec!["SORT", "mylist", "LIMIT", "0", "5", "ALPHA", "DESC"];
-        let esperado: Vec<String> = e.iter().map(|s| s.to_string()).collect();
-        assert_eq!(resultado, esperado);
+        let mut resultado = parser.parsear_stream().unwrap();
+
+        assert_eq!(resultado.get_nombre(), "SORT".to_string());
+        assert_eq!(resultado.get_clave(), Some("mylist".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("LIMIT".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("0".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("5".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("ALPHA".to_string()));
+        assert_eq!(resultado.get_parametro(), Some("DESC".to_string()));
     }
 
     #[test]
