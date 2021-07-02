@@ -6,8 +6,6 @@ use std::sync::{Arc, Mutex};
 /*
 Comando Lista faltantes:
 + getset
-+ mget
-+ mset
 */
 pub struct ComandoStringHandler {
     comando: ComandoInfo,
@@ -189,6 +187,20 @@ fn mget(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
 }
 
 
+fn mset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
+
+    let parametros = match comando.get_parametros() {
+        Some(p) => p,
+        None => return ResultadoRedis::Error("comando sin parametro".to_string())
+    };
+
+    if parametros.len() % 2 != 0 {
+        return ResultadoRedis::Error("wrong number of arguments for MSET".to_string())
+    }
+
+    bdd.lock().unwrap().guardar_valores(parametros);
+    ResultadoRedis::StrSimple("OK".to_string())
+}
 
 #[cfg(test)]
 mod tests {
@@ -574,5 +586,39 @@ mod tests {
             ResultadoRedis::Error("Comando sin claves".to_string()),
             mget(&mut comando, Arc::new(Mutex::new(bdd)))
         );
+    }
+
+    #[test]
+    fn mset_guarda_todos_los_valores(){
+        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let ptr_hash = Arc::new(Mutex::new(bdd));
+        let ptr_hash1 = Arc::clone(&ptr_hash);
+
+        let mut comando = ComandoInfo::new(vec!["MSET".to_string(),"clave1".to_string(),"1".to_string(),
+                                                "clave2".to_string(),"2".to_string(),
+                                                "clave3".to_string(),"3".to_string()]);
+
+        assert_eq!(ResultadoRedis::StrSimple("OK".to_string()),mset(&mut comando,ptr_hash1));
+
+        assert_eq!(Some(&TipoRedis::Str("1".to_string())),ptr_hash.lock().unwrap().obtener_valor("clave1"));
+        assert_eq!(Some(&TipoRedis::Str("2".to_string())),ptr_hash.lock().unwrap().obtener_valor("clave2"));
+        assert_eq!(Some(&TipoRedis::Str("3".to_string())),ptr_hash.lock().unwrap().obtener_valor("clave3"));
+    }
+
+    #[test]
+    fn mset_devuelve_un_error_tener_una_cantidad_de_argumentos_impares(){
+        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let ptr_hash = Arc::new(Mutex::new(bdd));
+        let ptr_hash1 = Arc::clone(&ptr_hash);
+
+        let mut comando = ComandoInfo::new(vec!["MSET".to_string(),"clave1".to_string(),"1".to_string(),
+                                                "clave2".to_string(),"2".to_string(),
+                                                "clave3".to_string()]);
+
+        assert_eq!(ResultadoRedis::Error("wrong number of arguments for MSET".to_string()),mset(&mut comando,ptr_hash1));
+
+        assert_eq!(None,ptr_hash.lock().unwrap().obtener_valor("clave1"));
+        assert_eq!(None,ptr_hash.lock().unwrap().obtener_valor("clave2"));
+        assert_eq!(None,ptr_hash.lock().unwrap().obtener_valor("clave3"));
     }
 }
