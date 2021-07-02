@@ -11,6 +11,7 @@ pub enum ResultadoRedis {
     BulkStr(String),
     Int(usize),
     Vector(Vec<ResultadoRedis>),
+    Nil,
     Error(String),
 }
 
