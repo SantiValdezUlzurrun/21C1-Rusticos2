@@ -66,6 +66,7 @@ pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
                 .collect::<Vec<String>>()
                 .join("")
         ),
+        ResultadoRedis::Nil => "$-1\r\n".to_string(),
         ResultadoRedis::Error(e) => format!("-{}\r\n", e),
     }
 }

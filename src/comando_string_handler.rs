@@ -119,6 +119,7 @@ fn strlen(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
     }
 }
 
+#[allow(dead_code)]
 fn operar_sobre_int(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>, f: fn(i32,i32) -> i32) -> ResultadoRedis{
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -152,7 +153,6 @@ fn operar_sobre_int(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>, f: 
     ResultadoRedis::BulkStr(num.to_string())
 }
 
-
 #[allow(dead_code)]
 fn decrby(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     operar_sobre_int(comando,bdd, |a,b| a-b)
@@ -163,11 +163,38 @@ fn incrby(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
     operar_sobre_int(comando,bdd, |a,b| a+b)
 }
 
+#[allow(dead_code)]
+fn mget(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    
+    let mut valores = vec![];
+    let mut quedan_valores = true;
+    
+    while quedan_valores {
+        let param = comando.get_parametro();
+        match param {
+            Some(p) => {
+                match bdd.lock().unwrap().obtener_valor(&p) {
+                    Some(TipoRedis::Str(valor)) => {valores.push(ResultadoRedis::BulkStr(valor.to_string()));}
+                    _ => {valores.push(ResultadoRedis::Nil);}
+                }
+            }
+            None => {quedan_valores = false;}
+        }
+    }
+
+    if valores.len() == 0 {
+        return ResultadoRedis::Error("Comando sin claves".to_string());
+    }
+    ResultadoRedis::Vector(valores)
+}
+
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::LinkedList;
+    use std::collections::HashSet;
 
     #[test]
     fn get_devuelve_el_valor_almacenado_en_el_hash() {
@@ -452,12 +479,100 @@ mod tests {
     #[test]
     fn incrby_devuelve_error_un_valor_erroneo_a_una_clave_parseable() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
-         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("1".to_string()));
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("1".to_string()));
         let mut comando = ComandoInfo::new(vec!["incrby".to_string(),"miClave".to_string(),"a".to_string()]);
 
         assert_eq!(
             ResultadoRedis::Error("Parametro no es un int".to_string()),
             incrby(&mut comando, Arc::new(Mutex::new(bdd)))
+        );
+    }
+
+    #[test]
+    fn mget_devuelve_una_lista_con_todos_los_valores_de_las_claves() {
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
+        bdd.guardar_valor("clave2".to_string(), TipoRedis::Str("2".to_string()));
+        bdd.guardar_valor("clave3".to_string(), TipoRedis::Str("3".to_string()));
+        bdd.guardar_valor("clave4".to_string(), TipoRedis::Str("4".to_string()));
+
+        let mut comando = ComandoInfo::new(vec!["mget".to_string(),"clave1".to_string(),"clave2".to_string(),
+                                                "clave3".to_string(),"clave4".to_string()]);
+
+        assert_eq!(
+            ResultadoRedis::Vector(vec![ResultadoRedis::BulkStr("1".to_string()),ResultadoRedis::BulkStr("2".to_string()),
+                                        ResultadoRedis::BulkStr("3".to_string()),ResultadoRedis::BulkStr("4".to_string())]),
+            mget(&mut comando, Arc::new(Mutex::new(bdd)))
+        );
+    }
+
+    #[test]
+    fn mget_devuelve_una_lista_con_todos_los_valores_de_las_claves_y_si_la_clave_no_existe_devuelve_nil() {
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
+        bdd.guardar_valor("clave2".to_string(), TipoRedis::Str("2".to_string()));
+        bdd.guardar_valor("clave3".to_string(), TipoRedis::Str("3".to_string()));
+        bdd.guardar_valor("clave4".to_string(), TipoRedis::Str("4".to_string()));
+
+        let mut comando = ComandoInfo::new(vec!["mget".to_string(),"clave1".to_string(),"clave2".to_string(),
+                                                "clave3".to_string(),"clave1000".to_string()]);
+
+        assert_eq!(
+            ResultadoRedis::Vector(vec![ResultadoRedis::BulkStr("1".to_string()),ResultadoRedis::BulkStr("2".to_string()),
+                                        ResultadoRedis::BulkStr("3".to_string()),ResultadoRedis::Nil]),
+            mget(&mut comando, Arc::new(Mutex::new(bdd)))
+        );
+    }
+
+    #[test]
+    fn mget_devuelve_una_lista_con_todos_nil_si_la_clave_no_existen() {
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
+        bdd.guardar_valor("clave2".to_string(), TipoRedis::Str("2".to_string()));
+        bdd.guardar_valor("clave3".to_string(), TipoRedis::Str("3".to_string()));
+        bdd.guardar_valor("clave4".to_string(), TipoRedis::Str("4".to_string()));
+
+        let mut comando = ComandoInfo::new(vec!["mget".to_string(),"clave1000".to_string(),"clave2000".to_string(),
+                                                "clave3000".to_string(),"clave4000".to_string()]);
+
+        assert_eq!(
+            ResultadoRedis::Vector(vec![ResultadoRedis::Nil,ResultadoRedis::Nil,
+                                        ResultadoRedis::Nil,ResultadoRedis::Nil]),
+            mget(&mut comando, Arc::new(Mutex::new(bdd)))
+        );
+    }
+
+    #[test]
+    fn mget_devuelve_una_lista_con_todos_nil_si_la_clave_no_es_de_tipo_str() {
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
+        bdd.guardar_valor("clave2".to_string(), TipoRedis::Lista(LinkedList::new()));
+        bdd.guardar_valor("clave3".to_string(), TipoRedis::Set(HashSet::new()));
+        bdd.guardar_valor("clave4".to_string(), TipoRedis::Str("4".to_string()));
+
+        let mut comando = ComandoInfo::new(vec!["mget".to_string(),"clave1".to_string(),"clave2".to_string(),
+                                                "clave3".to_string(),"clave4".to_string()]);
+
+        assert_eq!(
+            ResultadoRedis::Vector(vec![ResultadoRedis::BulkStr("1".to_string()),ResultadoRedis::Nil,
+                                        ResultadoRedis::Nil,ResultadoRedis::BulkStr("4".to_string())]),
+            mget(&mut comando, Arc::new(Mutex::new(bdd)))
+        );
+    }
+
+    #[test]
+    fn mget_devuelve_una_error_con_si_no_hay_parametro() {
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
+        bdd.guardar_valor("clave2".to_string(), TipoRedis::Lista(LinkedList::new()));
+        bdd.guardar_valor("clave3".to_string(), TipoRedis::Set(HashSet::new()));
+        bdd.guardar_valor("clave4".to_string(), TipoRedis::Str("4".to_string()));
+
+        let mut comando = ComandoInfo::new(vec!["mget".to_string()]);
+
+        assert_eq!(
+            ResultadoRedis::Error("Comando sin claves".to_string()),
+            mget(&mut comando, Arc::new(Mutex::new(bdd)))
         );
     }
 }
