@@ -38,9 +38,9 @@ impl ComandoInfo {
             .map(|clave| clave.to_string())
     }
 
-    pub fn get_parametros(&self) -> Option<Vec<String>>{
-        if self.parametros.len() > 0 {
-            return Some(self.parametros.clone())
+    pub fn get_parametros(&self) -> Option<Vec<String>> {
+        if !self.parametros.is_empty() {
+            return Some(self.parametros.clone());
         }
         None
     }
@@ -124,12 +124,12 @@ mod tests {
 
         assert_eq!(
             Some(vec![
-            "clave1".to_string(),
-            "clave2".to_string(),
-            "clave3".to_string(),
-            "clave4".to_string(),
-            "clave5".to_string(),
-        ]),
+                "clave1".to_string(),
+                "clave2".to_string(),
+                "clave3".to_string(),
+                "clave4".to_string(),
+                "clave5".to_string(),
+            ]),
             comando_info.get_parametros()
         );
     }
