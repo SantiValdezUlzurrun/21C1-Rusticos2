@@ -1,4 +1,4 @@
-use std::collections::{HashMap, LinkedList};
+use std::collections::HashMap;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::BufRead;
@@ -77,7 +77,7 @@ fn guardar_elemento(elemento: &str) -> String {
     ID_TAM_STR.to_string() + &len_elemento.to_string() + SEPARADOR + elemento + SEPARADOR
 }
 
-fn guardar_cant_arg(lista: &LinkedList<String>) -> String {
+fn guardar_cant_arg(lista: &[String]) -> String {
     let cant_arg = lista.len() + 2;
     ID_ARG.to_string() + &cant_arg.to_string() + SEPARADOR
 }
@@ -162,13 +162,13 @@ mod tests {
         map.insert("UnaClave1", TipoRedis::Str("UnValor".to_string()));
         map.insert("UnaClave2", TipoRedis::Str("UnValor".to_string()));
 
-        let mut lista = TipoRedis::Lista(LinkedList::new());
+        let mut lista = TipoRedis::Lista(Vec::new());
 
         match lista {
             TipoRedis::Lista(ref mut lista) => {
-                lista.push_back("PRIMER_VALOR".to_string());
-                lista.push_back("SEGUNDO_VALOR".to_string());
-                lista.push_back("TERCER_VALOR".to_string());
+                lista.push("PRIMER_VALOR".to_string());
+                lista.push("SEGUNDO_VALOR".to_string());
+                lista.push("TERCER_VALOR".to_string());
             }
 
             TipoRedis::Str(_) => {}
