@@ -57,6 +57,19 @@ impl BaseDeDatos {
         self.persistirse();
     }
 
+    pub fn guardar_valores(&mut self, parametros: Vec<String>) {
+        let mut index = 0;
+        while index != parametros.len() - 1 {
+            let clave = &parametros[index];
+            let valor = &parametros[index + 1];
+
+            self.hashmap
+                .insert(clave.to_string(), TipoRedis::Str(valor.to_string()));
+
+            index += 1;
+        }
+    }
+
     pub fn existe_clave(&mut self, clave: &str) -> bool {
         self.hashmap.contains_key(clave)
     }

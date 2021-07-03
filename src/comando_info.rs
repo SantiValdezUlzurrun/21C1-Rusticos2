@@ -38,6 +38,13 @@ impl ComandoInfo {
             .map(|clave| clave.to_string())
     }
 
+    pub fn get_parametros(&self) -> Option<Vec<String>> {
+        if !self.parametros.is_empty() {
+            return Some(self.parametros.clone());
+        }
+        None
+    }
+
     pub fn get_parametro(&mut self) -> Option<String> {
         if self.index < self.parametros.len() {
             let a_devolver = &self.parametros[self.index];
@@ -100,6 +107,30 @@ mod tests {
         assert_eq!(
             "GET clave arg1 arg2 arg3 arg4".to_string(),
             comando_info.descripcion()
+        );
+    }
+
+    #[test]
+    fn comando_info_devuelve_una_lista_con_todos_los_parametros() {
+        let parametros = vec![
+            "MGET".to_string(),
+            "clave1".to_string(),
+            "clave2".to_string(),
+            "clave3".to_string(),
+            "clave4".to_string(),
+            "clave5".to_string(),
+        ];
+        let comando_info = ComandoInfo::new(parametros);
+
+        assert_eq!(
+            Some(vec![
+                "clave1".to_string(),
+                "clave2".to_string(),
+                "clave3".to_string(),
+                "clave4".to_string(),
+                "clave5".to_string(),
+            ]),
+            comando_info.get_parametros()
         );
     }
 }
