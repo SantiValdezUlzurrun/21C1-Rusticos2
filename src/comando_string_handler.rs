@@ -205,7 +205,6 @@ fn mset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::LinkedList;
     use std::collections::HashSet;
 
     #[test]
@@ -223,7 +222,7 @@ mod tests {
     #[test]
     fn get_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
-        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(
@@ -289,7 +288,7 @@ mod tests {
     #[test]
     fn append_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
-        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec![
             "APPEND".to_owned(),
             "miClave".to_string(),
@@ -325,7 +324,7 @@ mod tests {
     #[test]
     fn getdel_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
-        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(
@@ -349,7 +348,7 @@ mod tests {
     #[test]
     fn strlen_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
-        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(LinkedList::new()));
+        bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
         assert_eq!(

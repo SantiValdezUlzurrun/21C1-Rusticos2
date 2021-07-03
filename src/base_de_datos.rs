@@ -1,6 +1,6 @@
 use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
 
-use std::collections::{HashMap, HashSet, LinkedList};
+use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::thread::JoinHandle;
@@ -19,7 +19,7 @@ pub enum ResultadoRedis {
 #[derive(Debug, PartialEq, Clone)]
 pub enum TipoRedis {
     Str(String),
-    Lista(LinkedList<String>),
+    Lista(Vec<String>),
     Set(HashSet<String>),
 }
 
