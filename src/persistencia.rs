@@ -5,8 +5,7 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
 use std::sync::mpsc::{Receiver, Sender};
-use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::base_de_datos::TipoRedis;
 
@@ -24,6 +23,7 @@ pub enum MensajePersistencia {
 pub struct PersistidorHandler {
     archivo: String,
     intervalo: Duration,
+    instante: Instant,
     receptor: Receiver<MensajePersistencia>,
 }
 
@@ -32,22 +32,25 @@ impl PersistidorHandler {
         PersistidorHandler {
             archivo,
             receptor,
+            instante: Instant::now(),
             intervalo: Duration::from_secs(intervalo),
         }
     }
 
-    pub fn persistir(&self) {
+    pub fn persistir(&mut self) {
         while let Ok(mensaje) = self.receptor.recv() {
             match mensaje {
                 MensajePersistencia::Info(a_persistir) => {
-                    //persisto
-                    let mut vector: Vec<String> = vec![];
-                    for (key, val) in a_persistir.iter() {
-                        vector.push(guardar_clave_valor(key.to_string(), val));
-                    }
-                    guardar_en_archivo(&self.archivo, vector);
 
-                    thread::sleep(self.intervalo);
+                    if self.instante.elapsed() >= self.intervalo {
+                        //persisto
+                        let mut vector: Vec<String> = vec![];
+                        for (key, val) in a_persistir.iter() {
+                            vector.push(guardar_clave_valor(key.to_string(), val));
+                        }
+                        guardar_en_archivo(&self.archivo, vector);
+                        self.instante = Instant::now();
+                    }
                 }
 
                 MensajePersistencia::Cerrar => break,

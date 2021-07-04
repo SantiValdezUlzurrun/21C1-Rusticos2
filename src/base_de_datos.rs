@@ -33,7 +33,7 @@ pub struct BaseDeDatos {
 impl BaseDeDatos {
     pub fn new(archivo_persistencia: String) -> Self {
         let (tx, rx) = channel();
-        let handler = PersistidorHandler::new(archivo_persistencia, 1, rx);
+        let mut handler = PersistidorHandler::new(archivo_persistencia, 1, rx);
 
         let hilo_persistencia = thread::spawn(move || {
             handler.persistir();
