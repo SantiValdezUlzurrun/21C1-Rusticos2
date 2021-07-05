@@ -1,4 +1,5 @@
 mod base_de_datos;
+mod valor;
 mod comando;
 mod comando_info;
 mod comando_key_handler;

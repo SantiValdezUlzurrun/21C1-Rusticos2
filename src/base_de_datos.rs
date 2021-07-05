@@ -1,4 +1,5 @@
 use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
+use crate::valor::Valor;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Sender};
@@ -24,7 +25,7 @@ pub enum TipoRedis {
 }
 
 pub struct BaseDeDatos {
-    hashmap: HashMap<String, TipoRedis>,
+    hashmap: HashMap<String, Valor>,
     persistidor: Persistidor,
     hilo: Option<JoinHandle<()>>,
     tx: Sender<MensajePersistencia>,
@@ -48,11 +49,20 @@ impl BaseDeDatos {
     }
 
     pub fn obtener_valor(&self, clave: &str) -> Option<&TipoRedis> {
-        self.hashmap.get(clave)
+        match self.hashmap.get(clave) {
+            Some(v) => v.get(),
+            None => None,
+        }
+    }
+
+    pub fn guardar_valor_con_expiracion(&mut self, clave: String, expiracion: u64, valor: TipoRedis) {
+        self.hashmap.insert(clave, Valor::new(valor, expiracion));
+
+        self.persistirse();
     }
 
     pub fn guardar_valor(&mut self, clave: String, valor: TipoRedis) {
-        self.hashmap.insert(clave, valor);
+        self.hashmap.insert(clave, Valor::new(valor, 0));
 
         self.persistirse();
     }
@@ -64,19 +74,18 @@ impl BaseDeDatos {
             let valor = &parametros[index + 1];
 
             self.hashmap
-                .insert(clave.to_string(), TipoRedis::Str(valor.to_string()));
+                .insert(clave.to_string(),
+                        Valor::new(TipoRedis::Str(valor.to_string()), 0));
 
             index += 1;
         }
     }
 
     pub fn existe_clave(&mut self, clave: &str) -> bool {
-        self.hashmap.contains_key(clave)
-    }
-
-    #[allow(dead_code)]
-    pub fn cant_claves(&mut self) -> usize {
-        self.hashmap.len()
+        match self.hashmap.get(clave) {
+            Some(v) => !v.expiro(),
+            None => false,
+        }
     }
 
     pub fn eliminar_clave(&mut self, clave: &str) -> usize {
@@ -99,7 +108,7 @@ impl BaseDeDatos {
     }
 
     fn persistirse(&self) {
-        self.persistidor.persistir(self.hashmap.clone());
+        //self.persistidor.persistir(self.hashmap.clone());
     }
 }
 
@@ -116,6 +125,7 @@ impl Drop for BaseDeDatos {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn base_de_datos_devuelve_una_copia_de_un_elemento_almacenado() {
@@ -136,5 +146,19 @@ mod tests {
         data_base.eliminar_clave("clave");
 
         assert!(!data_base.existe_clave("clave"));
+    }
+
+
+    #[test]
+    fn si_se_guarda_una_clave_que_expira_en_1_segundo_cuando_se_la_quiere_recuperar_no_se_encuentra() {
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor_con_expiracion("clave".to_string(), 1, TipoRedis::Str("valor".to_string()));
+
+        thread::sleep(Duration::from_secs(2));
+
+        assert_eq!(
+            None,
+            data_base.obtener_valor("clave")
+        );
     }
 }
