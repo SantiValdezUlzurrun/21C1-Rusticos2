@@ -108,7 +108,7 @@ impl BaseDeDatos {
     }
 
     fn persistirse(&self) {
-        //self.persistidor.persistir(self.hashmap.clone());
+        self.persistidor.persistir(self.hashmap.clone());
     }
 }
 

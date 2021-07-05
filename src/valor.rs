@@ -2,6 +2,7 @@ use crate::base_de_datos::TipoRedis;
 
 use std::time::{Duration, Instant};
 
+#[derive(Clone)]
 pub struct Valor {
     valor: TipoRedis,
     momento_de_creacion: Instant,
