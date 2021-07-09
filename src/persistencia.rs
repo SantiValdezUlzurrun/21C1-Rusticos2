@@ -139,9 +139,9 @@ mod tests {
     fn inserto_varios_strings_en_hash_map_y_guardar_clave_valor_devuelve_el_mensaje_para_volver_a_cargarlos(
     ) {
         let mut map = HashMap::new();
-        map.insert("UnaClave1", Valor::new(TipoRedis::Str("UnValor".to_string()), 0));
-        map.insert("UnaClave2", Valor::new(TipoRedis::Str("UnValor".to_string()), 0));
-        map.insert("UnaClave3", Valor::new(TipoRedis::Str("UnValor".to_string()), 0));
+        map.insert("UnaClave1", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
+        map.insert("UnaClave2", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
+        map.insert("UnaClave3", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
 
         let mut vector: Vec<String> = vec![];
         for (key, val) in map.iter() {
@@ -163,8 +163,8 @@ mod tests {
     fn inserto_varios_tipo_redis_en_hash_map_y_guardar_clave_valor_devuelve_el_mensaje_para_volver_a_cargarlos(
     ) {
         let mut map = HashMap::new();
-        map.insert("UnaClave1", Valor::new(TipoRedis::Str("UnValor".to_string()), 0));
-        map.insert("UnaClave2", Valor::new(TipoRedis::Str("UnValor".to_string()), 0));
+        map.insert("UnaClave1", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
+        map.insert("UnaClave2", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
 
         let mut lista = TipoRedis::Lista(Vec::new());
 
@@ -179,7 +179,7 @@ mod tests {
             _ => {}
         }
 
-        map.insert("milista", Valor::new(lista, 0));
+        map.insert("milista", Valor::no_expirable(lista));
 
         let mut vector: Vec<String> = vec![];
         for (key, val) in map.iter() {

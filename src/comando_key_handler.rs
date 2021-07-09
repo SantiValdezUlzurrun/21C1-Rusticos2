@@ -117,11 +117,31 @@ fn exists(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
     recorrer_y_ejecutar(comando, bdd, Box::new(|_| {}))
 }
 
+fn expire(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+     let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+
+    let parametro: u64 = match comando.get_parametro() {
+        Some(p) => match p.parse() {
+            Ok(t) => t,
+            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+        },
+        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+    };
+
+    let resultado = bdd.lock().unwrap().actualizar_valor_con_expiracion(clave, parametro);
+    ResultadoRedis::Int(resultado)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::base_de_datos::TipoRedis;
     use std::collections::HashSet;
+    use std::thread;
+    use std::time::Duration;
 
     #[test]
     fn copy_copia_el_valor_de_una_clave_en_otra() {
@@ -344,5 +364,28 @@ mod tests {
             tipo(&mut comando_info4, ptr4),
             ResultadoRedis::BulkStr("none".to_string())
         );
+    }
+
+    #[test]
+    fn expire_cuando_se_crea_una_clave_no_expirable_y_se_la_pasa_a_volatil_esta_expira_correctamente() {
+
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
+        let ptr = Arc::new(Mutex::new(data_base));
+
+        let mut comando = ComandoInfo::new(vec![
+            "expire".to_string(),
+            "clave".to_string(),
+            "1".to_string(),
+        ]);
+
+        assert_eq!(
+            ResultadoRedis::Int(1),
+            expire(&mut comando, Arc::clone(&ptr))
+        );
+
+        thread::sleep(Duration::from_secs(2));
+
+        assert!(!ptr.lock().unwrap().existe_clave("clave"));
     }
 }

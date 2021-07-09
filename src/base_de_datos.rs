@@ -56,13 +56,23 @@ impl BaseDeDatos {
     }
 
     pub fn guardar_valor_con_expiracion(&mut self, clave: String, expiracion: u64, valor: TipoRedis) {
-        self.hashmap.insert(clave, Valor::new(valor, expiracion));
+        self.hashmap.insert(clave, Valor::expirable(valor, expiracion));
 
         self.persistirse();
     }
 
+    pub fn actualizar_valor_con_expiracion(&mut self, clave: String, expiracion: u64) -> usize {
+        match self.hashmap.get_mut(&clave) {
+            Some(v) => {
+                v.actualizar_expiracion(expiracion);
+                1
+            },
+            None => 0,
+        }
+    }
+
     pub fn guardar_valor(&mut self, clave: String, valor: TipoRedis) {
-        self.hashmap.insert(clave, Valor::new(valor, 0));
+        self.hashmap.insert(clave, Valor::no_expirable(valor));
 
         self.persistirse();
     }
@@ -75,7 +85,7 @@ impl BaseDeDatos {
 
             self.hashmap
                 .insert(clave.to_string(),
-                        Valor::new(TipoRedis::Str(valor.to_string()), 0));
+                        Valor::no_expirable(TipoRedis::Str(valor.to_string())));
 
             index += 1;
         }
