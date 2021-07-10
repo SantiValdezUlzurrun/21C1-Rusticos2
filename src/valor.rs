@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 pub struct Valor {
     valor: TipoRedis,
     momento_de_creacion: Instant,
+    ultimo_acceso: Instant,
     vida_util: Option<Duration>,
 }
 
@@ -19,6 +20,7 @@ impl Valor {
         Valor {
             valor,
             momento_de_creacion: Instant::now(),
+            ultimo_acceso: Instant::now(),
             vida_util: Some(Duration::from_secs(vida_util)),
         }
     }
@@ -27,6 +29,7 @@ impl Valor {
         Valor {
             valor,
             momento_de_creacion: Instant::now(),
+            ultimo_acceso: Instant::now(),
             vida_util: None,
         }
     }
@@ -46,9 +49,24 @@ impl Valor {
         }
     }
 
+    pub fn obtener_expiracion(&self) -> isize {
+        match self.vida_util {
+            Some(d) => d.as_secs() as isize,
+            None => -1,
+        }
+    }
+
     pub fn actualizar_expiracion(&mut self, nueva_expiracion: u64) {
         self.momento_de_creacion = Instant::now();
         self.vida_util = Some(Duration::from_secs(nueva_expiracion));
+    }
+
+    pub fn hacer_persistente(&mut self) {
+        self.vida_util = None;
+    }
+
+    pub fn actualizar_ultimo_acceso(&mut self) {
+        self.ultimo_acceso = Instant::now();
     }
 }
 

@@ -10,7 +10,7 @@ use std::thread::JoinHandle;
 pub enum ResultadoRedis {
     StrSimple(String),
     BulkStr(String),
-    Int(usize),
+    Int(isize),
     Vector(Vec<ResultadoRedis>),
     Nil,
     Error(String),
@@ -55,6 +55,13 @@ impl BaseDeDatos {
         }
     }
 
+    pub fn obtener_expiracion(&self, clave: &str) -> isize {
+        match self.hashmap.get(clave) {
+            Some(v) => v.obtener_expiracion(),
+            None => -2,
+        }
+    }
+
     pub fn guardar_valor_con_expiracion(&mut self, clave: String, expiracion: u64, valor: TipoRedis) {
         self.hashmap.insert(clave, Valor::expirable(valor, expiracion));
 
@@ -65,6 +72,16 @@ impl BaseDeDatos {
         match self.hashmap.get_mut(&clave) {
             Some(v) => {
                 v.actualizar_expiracion(expiracion);
+                1
+            },
+            None => 0,
+        }
+    }
+
+    pub fn actualizar_valor_sin_expiracion(&mut self, clave: String) -> usize {
+        match self.hashmap.get_mut(&clave) {
+            Some(v) => {
+                v.hacer_persistente();
                 1
             },
             None => 0,
@@ -117,9 +134,20 @@ impl BaseDeDatos {
         Some(())
     }
 
+    pub fn actualizar_ultimo_acceso(&mut self, clave: String) -> isize {
+        match self.hashmap.get_mut(&clave) {
+            Some(v) => {
+                v.actualizar_ultimo_acceso();
+                1
+            },
+            None => 0,
+        }
+    }
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }
+
+
 }
 
 impl Drop for BaseDeDatos {
