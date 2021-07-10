@@ -1,5 +1,4 @@
 mod base_de_datos;
-mod valor;
 mod comando;
 mod comando_info;
 mod comando_key_handler;
@@ -10,6 +9,7 @@ mod log_handler;
 mod parser;
 mod persistencia;
 mod redis;
+mod valor;
 
 use crate::parser::parsear_int;
 use crate::redis::Redis;

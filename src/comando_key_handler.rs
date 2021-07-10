@@ -2,7 +2,7 @@ use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
 use crate::comando::{Comando, ComandoHandler};
 use crate::comando_info::ComandoInfo;
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, Duration, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub struct ComandoKeyHandler {
     comando: ComandoInfo,
@@ -19,6 +19,8 @@ impl ComandoKeyHandler {
             "EXPIRE" => expire,
             "EXPIREAT" => expireat,
             "PERSIST" => persist,
+            "TTL" => ttl,
+            "TOUCH" => touch,
             _ => tipo,
         };
         ComandoKeyHandler {
@@ -132,10 +134,15 @@ fn expire(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
             Ok(t) => t,
             Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
         },
-        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        None => {
+            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        }
     };
 
-    let resultado = bdd.lock().unwrap().actualizar_valor_con_expiracion(clave, parametro);
+    let resultado = bdd
+        .lock()
+        .unwrap()
+        .actualizar_valor_con_expiracion(clave, parametro);
     ResultadoRedis::Int(resultado as isize)
 }
 
@@ -150,15 +157,22 @@ fn expireat(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
             Ok(t) => t,
             Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
         },
-        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        None => {
+            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        }
     };
 
     let tiempo_desde_epoch = UNIX_EPOCH + Duration::from_secs(parametro);
     let tiempo_a_esperar = match tiempo_desde_epoch.duration_since(SystemTime::now()) {
         Ok(d) => d,
-        Err(_) => return ResultadoRedis::Error("TimeError el tiempo desde epoch ya sucedio".to_string()),
+        Err(_) => {
+            return ResultadoRedis::Error("TimeError el tiempo desde epoch ya sucedio".to_string())
+        }
     };
-    let resultado = bdd.lock().unwrap().actualizar_valor_con_expiracion(clave, tiempo_a_esperar.as_secs());
+    let resultado = bdd
+        .lock()
+        .unwrap()
+        .actualizar_valor_con_expiracion(clave, tiempo_a_esperar.as_secs());
     ResultadoRedis::Int(resultado as isize)
 }
 
@@ -166,14 +180,6 @@ fn persist(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultado
     let clave = match comando.get_clave() {
         Some(c) => c,
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
-    };
-
-    let parametro: u64 = match comando.get_parametro() {
-        Some(p) => match p.parse() {
-            Ok(t) => t,
-            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
-        },
-        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
     };
 
     let resultado = bdd.lock().unwrap().actualizar_valor_sin_expiracion(clave);
@@ -430,8 +436,8 @@ mod tests {
     }
 
     #[test]
-    fn expire_cuando_se_crea_una_clave_no_expirable_y_se_la_pasa_a_volatil_esta_expira_correctamente() {
-
+    fn expire_cuando_se_crea_una_clave_no_expirable_y_se_la_pasa_a_volatil_esta_expira_correctamente(
+    ) {
         let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));

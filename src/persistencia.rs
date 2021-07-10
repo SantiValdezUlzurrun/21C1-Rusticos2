@@ -7,8 +7,8 @@ use std::io::Write;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::{Duration, Instant};
 
-use crate::valor::Valor;
 use crate::base_de_datos::TipoRedis;
+use crate::valor::Valor;
 
 const SEPARADOR: &str = "\\r\\n";
 const FORMATO_GET: &str = "*3\\r\\n$3\\r\\nSET\\r\\n";
@@ -42,7 +42,6 @@ impl PersistidorHandler {
         while let Ok(mensaje) = self.receptor.recv() {
             match mensaje {
                 MensajePersistencia::Info(a_persistir) => {
-
                     if self.instante.elapsed() >= self.intervalo {
                         //persisto
                         let mut vector: Vec<String> = vec![];
@@ -139,9 +138,18 @@ mod tests {
     fn inserto_varios_strings_en_hash_map_y_guardar_clave_valor_devuelve_el_mensaje_para_volver_a_cargarlos(
     ) {
         let mut map = HashMap::new();
-        map.insert("UnaClave1", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
-        map.insert("UnaClave2", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
-        map.insert("UnaClave3", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
+        map.insert(
+            "UnaClave1",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
+        map.insert(
+            "UnaClave2",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
+        map.insert(
+            "UnaClave3",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
 
         let mut vector: Vec<String> = vec![];
         for (key, val) in map.iter() {
@@ -163,8 +171,14 @@ mod tests {
     fn inserto_varios_tipo_redis_en_hash_map_y_guardar_clave_valor_devuelve_el_mensaje_para_volver_a_cargarlos(
     ) {
         let mut map = HashMap::new();
-        map.insert("UnaClave1", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
-        map.insert("UnaClave2", Valor::no_expirable(TipoRedis::Str("UnValor".to_string())));
+        map.insert(
+            "UnaClave1",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
+        map.insert(
+            "UnaClave2",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
 
         let mut lista = TipoRedis::Lista(Vec::new());
 

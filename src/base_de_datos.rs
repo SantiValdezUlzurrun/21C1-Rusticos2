@@ -62,8 +62,15 @@ impl BaseDeDatos {
         }
     }
 
-    pub fn guardar_valor_con_expiracion(&mut self, clave: String, expiracion: u64, valor: TipoRedis) {
-        self.hashmap.insert(clave, Valor::expirable(valor, expiracion));
+    #[allow(dead_code)]
+    pub fn guardar_valor_con_expiracion(
+        &mut self,
+        clave: String,
+        expiracion: u64,
+        valor: TipoRedis,
+    ) {
+        self.hashmap
+            .insert(clave, Valor::expirable(valor, expiracion));
 
         self.persistirse();
     }
@@ -73,7 +80,7 @@ impl BaseDeDatos {
             Some(v) => {
                 v.actualizar_expiracion(expiracion);
                 1
-            },
+            }
             None => 0,
         }
     }
@@ -83,7 +90,7 @@ impl BaseDeDatos {
             Some(v) => {
                 v.hacer_persistente();
                 1
-            },
+            }
             None => 0,
         }
     }
@@ -100,9 +107,10 @@ impl BaseDeDatos {
             let clave = &parametros[index];
             let valor = &parametros[index + 1];
 
-            self.hashmap
-                .insert(clave.to_string(),
-                        Valor::no_expirable(TipoRedis::Str(valor.to_string())));
+            self.hashmap.insert(
+                clave.to_string(),
+                Valor::no_expirable(TipoRedis::Str(valor.to_string())),
+            );
 
             index += 1;
         }
@@ -139,15 +147,13 @@ impl BaseDeDatos {
             Some(v) => {
                 v.actualizar_ultimo_acceso();
                 1
-            },
+            }
             None => 0,
         }
     }
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }
-
-
 }
 
 impl Drop for BaseDeDatos {
@@ -186,17 +192,18 @@ mod tests {
         assert!(!data_base.existe_clave("clave"));
     }
 
-
     #[test]
-    fn si_se_guarda_una_clave_que_expira_en_1_segundo_cuando_se_la_quiere_recuperar_no_se_encuentra() {
+    fn si_se_guarda_una_clave_que_expira_en_1_segundo_cuando_se_la_quiere_recuperar_no_se_encuentra(
+    ) {
         let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
-        data_base.guardar_valor_con_expiracion("clave".to_string(), 1, TipoRedis::Str("valor".to_string()));
+        data_base.guardar_valor_con_expiracion(
+            "clave".to_string(),
+            1,
+            TipoRedis::Str("valor".to_string()),
+        );
 
         thread::sleep(Duration::from_secs(2));
 
-        assert_eq!(
-            None,
-            data_base.obtener_valor("clave")
-        );
+        assert_eq!(None, data_base.obtener_valor("clave"));
     }
 }

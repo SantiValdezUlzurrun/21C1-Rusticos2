@@ -11,7 +11,7 @@ pub struct Valor {
 }
 
 impl Valor {
-
+    #[allow(dead_code)]
     pub fn new(valor: TipoRedis) -> Self {
         Valor::no_expirable(valor)
     }
@@ -76,19 +76,19 @@ mod tests {
     use std::thread;
 
     #[test]
-    fn cuando_se_crea_una_valor_no_expirable_este_no_expira_nunca(){
+    fn cuando_se_crea_una_valor_no_expirable_este_no_expira_nunca() {
         let valor = Valor::no_expirable(TipoRedis::Str("miClave".to_string()));
 
         assert!(!valor.expiro());
     }
 
     #[test]
-    fn cuando_se_espera_mas_tiempo_del_que_se_dijo_que_una_clave_expiraba_la_clave_efectivamente_esta_espirada() {
+    fn cuando_se_espera_mas_tiempo_del_que_se_dijo_que_una_clave_expiraba_la_clave_efectivamente_esta_espirada(
+    ) {
         let valor = Valor::expirable(TipoRedis::Str("miClave".to_string()), 1);
 
         thread::sleep(Duration::from_secs(2));
 
         assert!(valor.expiro());
     }
-
 }
