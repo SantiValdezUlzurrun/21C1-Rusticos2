@@ -79,7 +79,7 @@ pub fn llen(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -
         _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
     };
 
-    ResultadoRedis::Int(lista.len())
+    ResultadoRedis::Int(lista.len() as isize)
 }
 
 pub fn lpop(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
@@ -165,7 +165,7 @@ fn push(
         .unwrap()
         .guardar_valor(clave, TipoRedis::Lista(lista));
 
-    ResultadoRedis::Int(long)
+    ResultadoRedis::Int(long as isize)
 }
 
 pub fn lpush(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
@@ -363,7 +363,7 @@ pub fn lrem(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -
     } else {
         base_de_datos.lock().unwrap().eliminar_clave(&clave);
     }
-    ResultadoRedis::Int(cant_eliminada as usize)
+    ResultadoRedis::Int(cant_eliminada as isize)
 }
 
 pub fn lset(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {

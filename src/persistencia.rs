@@ -8,6 +8,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::time::{Duration, Instant};
 
 use crate::base_de_datos::TipoRedis;
+use crate::valor::Valor;
 
 const SEPARADOR: &str = "\\r\\n";
 const FORMATO_GET: &str = "*3\\r\\n$3\\r\\nSET\\r\\n";
@@ -16,7 +17,7 @@ const ID_ARG: &str = "*";
 const ID_TAM_STR: &str = "$";
 
 pub enum MensajePersistencia {
-    Info(HashMap<String, TipoRedis>),
+    Info(HashMap<String, Valor>),
     Cerrar,
 }
 
@@ -41,12 +42,11 @@ impl PersistidorHandler {
         while let Ok(mensaje) = self.receptor.recv() {
             match mensaje {
                 MensajePersistencia::Info(a_persistir) => {
-
                     if self.instante.elapsed() >= self.intervalo {
                         //persisto
                         let mut vector: Vec<String> = vec![];
                         for (key, val) in a_persistir.iter() {
-                            vector.push(guardar_clave_valor(key.to_string(), val));
+                            vector.push(guardar_clave_valor(key.to_string(), val.get()));
                         }
                         guardar_en_archivo(&self.archivo, vector);
                         self.instante = Instant::now();
@@ -68,7 +68,7 @@ impl Persistidor {
         Persistidor { persistidor }
     }
 
-    pub fn persistir(&self, base_de_datos: HashMap<String, TipoRedis>) {
+    pub fn persistir(&self, base_de_datos: HashMap<String, Valor>) {
         self.persistidor
             .send(MensajePersistencia::Info(base_de_datos))
             .unwrap();
@@ -85,13 +85,13 @@ fn guardar_cant_arg(lista: &[String]) -> String {
     ID_ARG.to_string() + &cant_arg.to_string() + SEPARADOR
 }
 
-fn guardar_clave_valor(clave: String, valor: &TipoRedis) -> String {
+fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>) -> String {
     match valor {
-        TipoRedis::Str(valor) => {
+        Some(TipoRedis::Str(valor)) => {
             FORMATO_GET.to_string() + &guardar_elemento(&clave) + &guardar_elemento(&valor)
         }
 
-        TipoRedis::Lista(lista) => {
+        Some(TipoRedis::Lista(lista)) => {
             let mut string_comando =
                 guardar_cant_arg(&lista) + FORMATO_LPUSH + &guardar_elemento(&clave);
             for valor in lista.iter() {
@@ -138,13 +138,22 @@ mod tests {
     fn inserto_varios_strings_en_hash_map_y_guardar_clave_valor_devuelve_el_mensaje_para_volver_a_cargarlos(
     ) {
         let mut map = HashMap::new();
-        map.insert("UnaClave1", TipoRedis::Str("UnValor".to_string()));
-        map.insert("UnaClave2", TipoRedis::Str("UnValor".to_string()));
-        map.insert("UnaClave3", TipoRedis::Str("UnValor".to_string()));
+        map.insert(
+            "UnaClave1",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
+        map.insert(
+            "UnaClave2",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
+        map.insert(
+            "UnaClave3",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
 
         let mut vector: Vec<String> = vec![];
         for (key, val) in map.iter() {
-            vector.push(guardar_clave_valor(key.to_string(), val));
+            vector.push(guardar_clave_valor(key.to_string(), val.get()));
         }
 
         assert!(vector.contains(&String::from(
@@ -162,8 +171,14 @@ mod tests {
     fn inserto_varios_tipo_redis_en_hash_map_y_guardar_clave_valor_devuelve_el_mensaje_para_volver_a_cargarlos(
     ) {
         let mut map = HashMap::new();
-        map.insert("UnaClave1", TipoRedis::Str("UnValor".to_string()));
-        map.insert("UnaClave2", TipoRedis::Str("UnValor".to_string()));
+        map.insert(
+            "UnaClave1",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
+        map.insert(
+            "UnaClave2",
+            Valor::no_expirable(TipoRedis::Str("UnValor".to_string())),
+        );
 
         let mut lista = TipoRedis::Lista(Vec::new());
 
@@ -178,11 +193,11 @@ mod tests {
             _ => {}
         }
 
-        map.insert("milista", lista);
+        map.insert("milista", Valor::no_expirable(lista));
 
         let mut vector: Vec<String> = vec![];
         for (key, val) in map.iter() {
-            vector.push(guardar_clave_valor(key.to_string(), val));
+            vector.push(guardar_clave_valor(key.to_string(), val.get()));
         }
 
         assert!(vector.contains(&String::from(

@@ -54,7 +54,7 @@ fn sadd(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
     bdd.lock()
         .unwrap()
         .guardar_valor(clave, TipoRedis::Set(a_agregar));
-    ResultadoRedis::Int(cantidad_ingresada)
+    ResultadoRedis::Int(cantidad_ingresada as isize)
 }
 
 fn aggregar_al_set(
@@ -79,7 +79,7 @@ fn scard(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRe
     };
 
     match bdd.lock().unwrap().obtener_valor(&clave) {
-        Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len()),
+        Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len() as isize),
         None => ResultadoRedis::Int(0),
         _ => ResultadoRedis::Error(
             "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
@@ -151,7 +151,7 @@ fn srem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
     bdd.lock()
         .unwrap()
         .guardar_valor(clave, TipoRedis::Set(a_agregar));
-    ResultadoRedis::Int(cantidad_eliminada)
+    ResultadoRedis::Int(cantidad_eliminada as isize)
 }
 
 fn eliminar_del_set(

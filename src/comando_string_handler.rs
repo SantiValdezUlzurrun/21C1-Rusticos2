@@ -93,12 +93,12 @@ fn append(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         bdd.lock()
             .unwrap()
             .guardar_valor(clave, TipoRedis::Str(valor.clone()));
-        return ResultadoRedis::Int(valor.len());
+        return ResultadoRedis::Int(valor.len() as isize);
     };
     bdd.lock()
         .unwrap()
         .guardar_valor(clave, TipoRedis::Str(parametro.to_string()));
-    ResultadoRedis::Int(parametro.len())
+    ResultadoRedis::Int(parametro.len() as isize)
 }
 
 fn getdel(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
@@ -118,7 +118,7 @@ fn strlen(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     };
     match bdd.lock().unwrap().obtener_valor(&clave) {
-        Some(TipoRedis::Str(valor)) => ResultadoRedis::Int(valor.len()),
+        Some(TipoRedis::Str(valor)) => ResultadoRedis::Int(valor.len() as isize),
         _ => ResultadoRedis::Error("StrLen error al obtener la clave".to_string()),
     }
 }

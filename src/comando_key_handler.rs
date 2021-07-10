@@ -2,6 +2,7 @@ use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
 use crate::comando::{Comando, ComandoHandler};
 use crate::comando_info::ComandoInfo;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub struct ComandoKeyHandler {
     comando: ComandoInfo,
@@ -15,6 +16,11 @@ impl ComandoKeyHandler {
             "DEL" => del,
             "EXISTS" => exists,
             "RENAME" => rename,
+            "EXPIRE" => expire,
+            "EXPIREAT" => expireat,
+            "PERSIST" => persist,
+            "TTL" => ttl,
+            "TOUCH" => touch,
             _ => tipo,
         };
         ComandoKeyHandler {
@@ -117,11 +123,94 @@ fn exists(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
     recorrer_y_ejecutar(comando, bdd, Box::new(|_| {}))
 }
 
+fn expire(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+
+    let parametro: u64 = match comando.get_parametro() {
+        Some(p) => match p.parse() {
+            Ok(t) => t,
+            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+        },
+        None => {
+            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        }
+    };
+
+    let resultado = bdd
+        .lock()
+        .unwrap()
+        .actualizar_valor_con_expiracion(clave, parametro);
+    ResultadoRedis::Int(resultado as isize)
+}
+
+fn expireat(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+
+    let parametro: u64 = match comando.get_parametro() {
+        Some(p) => match p.parse() {
+            Ok(t) => t,
+            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+        },
+        None => {
+            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        }
+    };
+
+    let tiempo_desde_epoch = UNIX_EPOCH + Duration::from_secs(parametro);
+    let tiempo_a_esperar = match tiempo_desde_epoch.duration_since(SystemTime::now()) {
+        Ok(d) => d,
+        Err(_) => {
+            return ResultadoRedis::Error("TimeError el tiempo desde epoch ya sucedio".to_string())
+        }
+    };
+    let resultado = bdd
+        .lock()
+        .unwrap()
+        .actualizar_valor_con_expiracion(clave, tiempo_a_esperar.as_secs());
+    ResultadoRedis::Int(resultado as isize)
+}
+
+fn persist(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+
+    let resultado = bdd.lock().unwrap().actualizar_valor_sin_expiracion(clave);
+    ResultadoRedis::Int(resultado as isize)
+}
+
+fn ttl(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+
+    let resultado = bdd.lock().unwrap().obtener_expiracion(&clave);
+    ResultadoRedis::Int(resultado)
+}
+
+fn touch(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let mut acum = 0;
+    while let Some(clave) = comando.get_parametro() {
+        acum += bdd.lock().unwrap().actualizar_ultimo_acceso(clave);
+    }
+    ResultadoRedis::Int(acum)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::base_de_datos::TipoRedis;
     use std::collections::HashSet;
+    use std::thread;
+    use std::time::Duration;
 
     #[test]
     fn copy_copia_el_valor_de_una_clave_en_otra() {
@@ -344,5 +433,28 @@ mod tests {
             tipo(&mut comando_info4, ptr4),
             ResultadoRedis::BulkStr("none".to_string())
         );
+    }
+
+    #[test]
+    fn expire_cuando_se_crea_una_clave_no_expirable_y_se_la_pasa_a_volatil_esta_expira_correctamente(
+    ) {
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
+        let ptr = Arc::new(Mutex::new(data_base));
+
+        let mut comando = ComandoInfo::new(vec![
+            "expire".to_string(),
+            "clave".to_string(),
+            "1".to_string(),
+        ]);
+
+        assert_eq!(
+            ResultadoRedis::Int(1),
+            expire(&mut comando, Arc::clone(&ptr))
+        );
+
+        thread::sleep(Duration::from_secs(2));
+
+        assert!(!ptr.lock().unwrap().existe_clave("clave"));
     }
 }
