@@ -1,11 +1,11 @@
 use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::valor::Valor;
 
+use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::thread::JoinHandle;
-use regex::Regex;
 
 #[derive(Debug, PartialEq)]
 pub enum ResultadoRedis {
@@ -159,11 +159,12 @@ impl BaseDeDatos {
             Err(_) => return Vec::new(),
         };
 
-        self.hashmap.keys()
-                    .cloned()
-                    .into_iter()
-                    .filter(|c| regex.is_match(c))
-                    .collect()
+        self.hashmap
+            .keys()
+            .cloned()
+            .into_iter()
+            .filter(|c| regex.is_match(c))
+            .collect()
     }
 
     fn persistirse(&self) {
