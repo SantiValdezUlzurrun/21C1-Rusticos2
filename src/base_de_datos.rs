@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::thread::JoinHandle;
+use regex::Regex;
 
 #[derive(Debug, PartialEq)]
 pub enum ResultadoRedis {
@@ -151,6 +152,20 @@ impl BaseDeDatos {
             None => 0,
         }
     }
+
+    pub fn claves(&self, re: &str) -> Vec<String> {
+        let regex = match Regex::new(re) {
+            Ok(r) => r,
+            Err(_) => return Vec::new(),
+        };
+
+        self.hashmap.keys()
+                    .cloned()
+                    .into_iter()
+                    .filter(|c| regex.is_match(c))
+                    .collect()
+    }
+
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }

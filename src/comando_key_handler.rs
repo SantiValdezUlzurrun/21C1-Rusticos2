@@ -21,6 +21,7 @@ impl ComandoKeyHandler {
             "PERSIST" => persist,
             "TTL" => ttl,
             "TOUCH" => touch,
+            "KEYS" => keys,
             _ => tipo,
         };
         ComandoKeyHandler {
@@ -204,6 +205,19 @@ fn touch(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRe
     ResultadoRedis::Int(acum)
 }
 
+fn keys(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let re = match comando.get_parametro() {
+        Some(p) => p,
+        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+    };
+
+    let vector: Vec<String> = bdd.lock().unwrap().claves(&re);
+
+    ResultadoRedis::Vector(vector.iter()
+                           .map(|v| ResultadoRedis::BulkStr(v.to_string()))
+                           .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -211,6 +225,7 @@ mod tests {
     use std::collections::HashSet;
     use std::thread;
     use std::time::Duration;
+    use regex::Regex;
 
     #[test]
     fn copy_copia_el_valor_de_una_clave_en_otra() {
@@ -456,5 +471,25 @@ mod tests {
         thread::sleep(Duration::from_secs(2));
 
         assert!(!ptr.lock().unwrap().existe_clave("clave"));
+    }
+
+    #[test]
+    fn keys_si_se_ingresa_la_siguiente_re_el_resultado_es_el_correcto() {
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("hello".to_string(), TipoRedis::Str("valor".to_string()));
+        data_base.guardar_valor("hallo".to_string(), TipoRedis::Str("valor".to_string()));
+        data_base.guardar_valor("hillo".to_string(), TipoRedis::Str("valor".to_string()));
+
+        let mut comando = ComandoInfo::new(vec![
+            "keys".to_string(),
+            "h[ae]llo".to_string(),
+        ]);
+
+        let valor = match keys(&mut comando, Arc::new(Mutex::new(data_base))) {
+            ResultadoRedis::Vector(v) => v,
+            _ => Vec::new(),
+        };
+        assert!(valor.contains(&ResultadoRedis::BulkStr("hallo".to_string())));
+        assert!(valor.contains(&ResultadoRedis::BulkStr("hello".to_string())));
     }
 }
