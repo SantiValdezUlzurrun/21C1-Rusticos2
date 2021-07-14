@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use crate::redis_error::RedisError;
 
 use std::io::Write;
@@ -53,4 +54,10 @@ impl Cliente {
     }
 }
 
+impl PartialEq for Cliente {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
 
+impl Eq for Cliente { }

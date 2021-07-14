@@ -1,8 +1,7 @@
-use std::net::TcpStream;
-use std::io::Write;
+use crate::cliente::Cliente;
 
 pub struct Canal {
-    suscriptores: Vec<TcpStream>
+    suscriptores: Vec<Cliente>
 }
 
 impl Canal {
@@ -13,17 +12,18 @@ impl Canal {
         }
     }
 
-    pub fn suscribirse(&mut self, suscriptor: TcpStream) {
+    pub fn suscribirse(&mut self, suscriptor: Cliente) {
         self.suscriptores.push(suscriptor);
     }
 
-    pub fn publicar(&mut self, cadena: &str) {
+    pub fn publicar(&mut self, mensaje: String) {
         for suscriptor in &mut self.suscriptores {
-            suscriptor.write(cadena.as_bytes());
+            suscriptor.enviar(mensaje.clone());
         }
     }
 
-    pub fn desuscribirse(&mut self, suscriptor: TcpStream) {
-
+    pub fn desuscribirse(&mut self, suscriptor: Cliente) {
+        let index = self.suscriptores.iter().position(|x| *x == suscriptor).unwrap();
+        self.suscriptores.remove(index);
     }
 }
