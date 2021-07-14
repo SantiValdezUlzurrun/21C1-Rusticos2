@@ -1,5 +1,5 @@
 use crate::comando_info::ComandoInfo;
-use crate::redis::RedisError;
+use crate::redis_error::RedisError;
 use std::fs::OpenOptions;
 use std::io::Write;
 

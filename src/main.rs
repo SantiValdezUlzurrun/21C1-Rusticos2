@@ -9,7 +9,10 @@ mod log_handler;
 mod parser;
 mod persistencia;
 mod redis;
+mod redis_error;
 mod valor;
+mod canal;
+mod cliente;
 
 use crate::parser::parsear_int;
 use crate::redis::Redis;

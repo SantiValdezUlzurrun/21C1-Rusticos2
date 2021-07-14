@@ -227,7 +227,6 @@ fn keys(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
 mod tests {
     use super::*;
     use crate::base_de_datos::TipoRedis;
-    use regex::Regex;
     use std::collections::HashSet;
     use std::thread;
     use std::time::Duration;

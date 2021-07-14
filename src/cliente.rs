@@ -1,32 +1,56 @@
-use std::thread;
+use crate::redis_error::RedisError;
 
-fn main() {
-    let mut handles = vec![];
+use std::io::Write;
+use std::net::TcpStream;
 
-    for _ in 0..10 {
-        let handle = thread::spawn(move || {
-            let client = match redis::Client::open("redis://127.0.0.1:8080/") {
-                Ok(a) => a,
-                Err(_) => return,
-            };
-            let mut con = match client.get_connection() {
-                Ok(a) => a,
-                Err(_) => return,
-            };
 
-            match redis::cmd("SET").arg("key").arg("foo").query(&mut con) {
-                Ok(a) => a,
-                Err(_) => return,
-            };
+pub type Token = i64;
 
-            let result = redis::cmd("GET").arg("key").query(&mut con);
+pub struct Cliente {
+    id: Token,
+    socket: TcpStream,
+}
 
-            assert_eq!(result, Ok("foo".to_string()));
-        });
-        handles.push(handle);
+impl Cliente {
+
+    pub fn new(id: Token, socket: TcpStream) -> Self {
+        Cliente{
+            id,
+            socket,
+        }
     }
 
-    for handle in handles {
-        handle.join().unwrap();
+    pub fn obtener_addr(&self) -> String {
+        match &self.socket.local_addr() {
+            Ok(a) => format!("Token: {} IP: ", self.id) + &a.to_string(),
+            Err(_) => format!("Token: {}", self.id)
+        }
+    }
+
+    pub fn obtener_socket(&self) -> TcpStream {
+        self.socket.try_clone().unwrap()
+    }
+
+    pub fn envio_informacion(&self) -> bool {
+        match self.socket.peek(&mut [0; 128]) {
+            Ok(len) => len > 0,
+            Err(_) => false,
+        }
+    }
+
+    pub fn esta_conectado(&self) -> bool {
+        match self.socket.peek(&mut [0; 128]) {
+            Ok(len) => len != 0,
+            Err(_) => false,
+        }
+    }
+
+    pub fn enviar(&mut self, mensaje: String) -> Result<(), RedisError>{
+        match self.socket.write(mensaje.as_bytes()) {
+                Ok(_) => Ok(()),
+                Err(_) => Err(RedisError::ConeccionError),
+        }
     }
 }
+
+
