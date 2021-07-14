@@ -1,3 +1,4 @@
+use crate::log_handler::LogHandlerEscritor;
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis};
 use crate::comando::crear_comando_handler;
 use crate::comando_info::ComandoInfo;
@@ -47,7 +48,7 @@ pub struct Redis {
 impl Redis {
     pub fn new(config: Config) -> Self {
         let (tx, rx) = channel();
-        let mut handler = LogHandler::new(config.logfile, rx);
+        let mut handler = LogHandlerEscritor::new(config.logfile, rx);
 
         let hilo_log = thread::spawn(move || {
             handler.logear();

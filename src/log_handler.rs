@@ -12,53 +12,98 @@ pub enum Mensaje {
     Cerrar,
 }
 
-pub struct LogHandler {
+pub fn aplicar_funcion_log(ruta: &str,receptor: &std::sync::mpsc::Receiver<Mensaje>, funcion_log: fn(&str,String) -> Result<(),String>) {
+        
+    while let Ok(mensaje) = receptor.recv() {
+            let a_logear = match mensaje {
+                Mensaje::InfoComando(addr, comando_info) => addr + " " + &comando_info.descripcion(),      
+
+                Mensaje::InfoError(addr, error) => addr + " " + &error.to_string(),
+
+                Mensaje::InfoConeccion(addr, mensaje) => addr + " " + &mensaje,
+
+                Mensaje::Cerrar => break,
+            };
+
+            match funcion_log(ruta,a_logear){
+                Ok(_) => {},
+                Err(_) => break,
+            }
+
+        }
+    }
+
+fn f_log_escritor(ruta: &str,a_logear: String) -> Result<(),String>{
+    let mut archivo = match OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(ruta)
+        {
+            Ok(archivo) => archivo,
+            Err(_) =>  return Err("ERROR al abrir el archivo".to_string()),
+        };
+
+        match writeln!(archivo, "{}", a_logear.as_str()) {
+            Ok(_) => return Ok(()),
+            Err(_) => return Err("ERROR al escribir en el archivo".to_string()),
+        }
+}
+
+fn f_log_verbose(ruta: &str,a_logear: String) -> Result<(),String>{
+    let mut archivo = match OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(ruta)
+        {
+            Ok(archivo) => archivo,
+            Err(_) =>  return Err("ERROR al abrir el archivo".to_string()),
+        };
+        
+        println!("{}",a_logear);
+
+        match writeln!(archivo, "{}", a_logear.as_str()) {
+            Ok(_) => return Ok(()),
+            Err(_) => return Err("ERROR al escribir en el archivo".to_string()),
+        }
+}
+pub trait LogHandler {
+    fn logear(&mut self);
+}
+
+
+pub struct LogHandlerEscritor {
     ruta: String,
     receptor: Receiver<Mensaje>,
 }
 
-impl LogHandler {
-    pub fn new(ruta: String, receptor: Receiver<Mensaje>) -> LogHandler {
-        LogHandler { ruta, receptor }
+impl LogHandlerEscritor{
+    pub fn new(ruta: String, receptor: Receiver<Mensaje>) -> LogHandlerEscritor {
+        LogHandlerEscritor { ruta, receptor }
     }
+}
 
-    pub fn logear(&mut self) {
-        let mut archivo = match OpenOptions::new()
-            .write(true)
-            .append(true)
-            .create(true)
-            .open(&self.ruta)
-        {
-            Ok(archivo) => archivo,
-            Err(_) => return, // Para pensar :(
-        };
+impl LogHandler for LogHandlerEscritor{
+    fn logear(&mut self) {
+        aplicar_funcion_log(&self.ruta,&mut self.receptor,f_log_escritor);
+    }
+}
 
-        while let Ok(mensaje) = self.receptor.recv() {
-            match mensaje {
-                Mensaje::InfoComando(addr, comando_info) => {
-                    let a_logear = addr + " " + &comando_info.descripcion();
+pub struct LogHandlerVerbose {
+    ruta: String,
+    receptor: Receiver<Mensaje>,
+} 
 
-                    if let Err(e) = writeln!(archivo, "{}", a_logear.as_str()) {
-                        println!("{:?}", e);
-                    }
-                }
-                Mensaje::InfoError(addr, error) => {
-                    let a_logear = addr + " " + &error.to_string();
-                    if let Err(e) = writeln!(archivo, "{}", a_logear.as_str()) {
-                        println!("{:?}", e);
-                    }
-                }
+impl LogHandlerVerbose{
+    pub fn new(ruta: String, receptor: Receiver<Mensaje>) -> LogHandlerVerbose {
+        LogHandlerVerbose { ruta, receptor }
+    }
+}
 
-                Mensaje::InfoConeccion(addr, mensaje) => {
-                    let a_logear = addr + " " + &mensaje;
-                    if let Err(e) = writeln!(archivo, "{}", a_logear.as_str()) {
-                        println!("{:?}", e);
-                    }
-                }
-
-                Mensaje::Cerrar => break,
-            };
-        }
+impl LogHandler for LogHandlerVerbose{
+    fn logear(&mut self) {
+        aplicar_funcion_log(&self.ruta,&mut self.receptor,f_log_verbose);
     }
 }
 
