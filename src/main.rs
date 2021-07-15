@@ -13,6 +13,7 @@ mod redis_error;
 mod valor;
 mod canal;
 mod cliente;
+mod comando_pubsub_handler;
 
 use crate::parser::parsear_int;
 use crate::redis::Redis;

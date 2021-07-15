@@ -1,6 +1,7 @@
 use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::valor::Valor;
 use crate::canal::Canal;
+use crate::cliente::Cliente;
 
 use regex::Regex;
 use std::collections::{HashMap, HashSet};

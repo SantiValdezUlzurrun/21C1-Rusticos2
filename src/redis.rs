@@ -115,7 +115,7 @@ fn manejar_cliente(
 
             logger.log_comando(cliente.obtener_addr(), comando.clone());
 
-            let resultado = manejar_comando(comando, Arc::clone(&tabla));
+            let resultado = manejar_comando(comando, cliente.clone(), Arc::clone(&tabla));
 
             let respuesta = parsear_respuesta(&resultado);
 
@@ -131,8 +131,8 @@ fn manejar_cliente(
     Ok(())
 }
 
-fn manejar_comando(entrada: ComandoInfo, tabla: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    let handler = crear_comando_handler(entrada);
+fn manejar_comando(entrada: ComandoInfo, cliente: Cliente, tabla: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let handler = crear_comando_handler(entrada, cliente);
     handler.ejecutar(tabla)
 }
 
