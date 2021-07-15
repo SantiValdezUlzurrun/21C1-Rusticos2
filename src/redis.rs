@@ -101,7 +101,12 @@ fn manejar_cliente(
 
     loop {
         if cliente.envio_informacion() {
-            let parser = Parser::new(cliente.obtener_socket());
+            let stream = match cliente.obtener_socket() {
+                Some(s) => s,
+                None => return Err(RedisError::ConeccionError),
+            };
+
+            let parser = Parser::new(stream);
 
             let comando = match parser.parsear_stream() {
                 Ok(orden) => orden,

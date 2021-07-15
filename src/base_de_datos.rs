@@ -1,5 +1,6 @@
 use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::valor::Valor;
+use crate::canal::Canal;
 
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
@@ -17,12 +18,12 @@ pub enum ResultadoRedis {
     Error(String),
 }
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq, Clone)]
 pub enum TipoRedis {
     Str(String),
     Lista(Vec<String>),
     Set(HashSet<String>),
+    Canal(Canal)
 }
 
 pub struct BaseDeDatos {

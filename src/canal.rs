@@ -1,5 +1,6 @@
 use crate::cliente::Cliente;
 
+#[derive(Debug, PartialEq, Clone)]
 pub struct Canal {
     suscriptores: Vec<Cliente>
 }
