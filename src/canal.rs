@@ -17,14 +17,23 @@ impl Canal {
         self.suscriptores.push(suscriptor);
     }
 
-    pub fn publicar(&mut self, mensaje: String) {
+    pub fn publicar(&mut self, mensaje: String) -> usize {
         for suscriptor in &mut self.suscriptores {
             suscriptor.enviar(mensaje.clone());
         }
+        self.suscriptores.len()
     }
 
     pub fn desuscribirse(&mut self, suscriptor: Cliente) {
         let index = self.suscriptores.iter().position(|x| *x == suscriptor).unwrap();
         self.suscriptores.remove(index);
+    }
+
+    pub fn es_activo(&self) -> bool {
+        self.suscriptores.len() > 1
+    }
+
+    pub fn len(&self) -> usize {
+        self.suscriptores.len()
     }
 }

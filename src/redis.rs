@@ -61,6 +61,7 @@ impl Redis {
             let logger = Logger::new(self.tx.clone());
 
             let mut cliente = Cliente::new(self.siguiente_id, stream);
+            self.siguiente_id += 1;
 
             let handle = thread::spawn(move || {
                 logger.log_coneccion(cliente.obtener_addr(), "Se conecto usario".to_string());

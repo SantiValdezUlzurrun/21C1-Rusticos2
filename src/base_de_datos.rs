@@ -169,6 +169,21 @@ impl BaseDeDatos {
             .collect()
     }
 
+    pub fn canales_activos(&self, re: &str) -> Vec<String> {
+        let canales: Vec<String> = Vec::new();
+        let claves = self.claves(re);
+        for clave in &claves {
+            let canal = match self.obtener_valor(clave) {
+                Some(TipoRedis::Canal(c)) => c,
+                _ => continue,
+            };
+            if canal.es_activo() {
+                canales.push(clave.to_string());
+            }
+        }
+        canales
+    }
+
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }
