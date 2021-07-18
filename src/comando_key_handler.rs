@@ -3,7 +3,7 @@ use crate::comando::{Comando, ComandoHandler};
 use crate::comando_info::ComandoInfo;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
+use std::iter::FromIterator;
 pub struct ComandoKeyHandler {
     comando: ComandoInfo,
     a_ejecutar: Comando,
@@ -223,11 +223,120 @@ fn keys(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
     )
 }
 
+fn es_parseable(num: &str)-> bool {
+   match num.parse::<i32>(){
+    Ok(_) => true,
+    Err(_) => false,
+   }
+}
+
+fn tiene_solo_valores_numericos(valores: Vec<String>) -> bool{
+    for valor in valores.iter() {
+        if !es_parseable(valor) {
+            return false;
+        }
+    }
+    return true;
+}
+
+fn selecionar_rango(parametros: Vec<String>,mut valores: Vec<String>) -> ResultadoRedis{
+        let rango = parametros.clone().into_iter().filter(|i| es_parseable(i)).collect::<Vec<_>>();
+
+        let rango_inf = match rango[0].parse::<i32>(){
+            Ok(num) => num,
+            Err(_) => return ResultadoRedis::Error("Error rango sort".to_string()),
+        };
+        let rango_max = match rango[1].parse::<i32>(){
+            Ok(num) => num,
+            Err(_) => return ResultadoRedis::Error("Error rango sort".to_string()),
+        };
+        let mut index_min = 0;
+        let mut index_max = valores.len() - 1 ;
+        
+        if  0 <= rango_inf && rango_inf < valores.len() as i32 {
+            index_min = rango_inf as usize;
+        }
+        if rango_inf <= rango_max && rango_max < valores.len() as i32 {
+            index_max = rango_max as usize; 
+        }
+
+        valores = valores[index_min..=index_max].to_vec();
+
+        let resultado = valores.iter().map(|x| ResultadoRedis::StrSimple(x.to_string())).collect::<Vec<ResultadoRedis>>();
+        ResultadoRedis::Vector(resultado)
+}
+
+fn sort_elemento_con_pesos_interno(parametros: Vec<String>,bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
+    let mut valores = match bdd.lock().unwrap().obtener_valor(&parametros[0]){
+        Some(&TipoRedis::Str(_)) => {
+            return ResultadoRedis::Error("WRONGTYPE".to_string())
+        }
+        None => {
+            return ResultadoRedis::Vector(vec![])
+        }
+        Some(TipoRedis::Lista(lista)) => lista.clone(),
+        Some(TipoRedis::Set(set)) => Vec::from_iter(set).iter().map(|x| x.to_string()).collect::<Vec<String>>(),
+    };
+
+    if !parametros.contains(&"alpha".to_string()) {
+        match tiene_solo_valores_numericos(valores.clone()){
+            true => {},
+            false => return ResultadoRedis::Error("ERR One or more scores can't be converted into double".to_string())
+        }
+    }
+    valores.sort();
+    
+    if parametros.contains(&"desc".to_string()) {
+        valores.reverse();
+    }
+
+    if parametros.contains(&"limit".to_string()){
+        return selecionar_rango(parametros,valores);
+    }
+
+    let resultado = valores.iter().map(|x| ResultadoRedis::StrSimple(x.to_string())).collect::<Vec<ResultadoRedis>>();
+    ResultadoRedis::Vector(resultado)
+}
+
+fn sort_elemento_con_pesos_externos(parametros: Vec<String>,bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis{
+    let valores = match bdd.lock().unwrap().obtener_valor(&parametros[0]){
+        Some(&TipoRedis::Str(_)) => {
+            return ResultadoRedis::Error("WRONGTYPE".to_string())
+        }
+        None => {
+            return ResultadoRedis::Vector(vec![])
+        }
+        Some(TipoRedis::Lista(lista)) => lista.clone(),
+        Some(TipoRedis::Set(set)) => Vec::from_iter(set).iter().map(|x| x.to_string()).collect::<Vec<String>>(),
+    };
+
+
+    
+    
+    let resultado = valores.iter().map(|x| ResultadoRedis::StrSimple(x.to_string())).collect::<Vec<ResultadoRedis>>();
+    ResultadoRedis::Vector(resultado)
+}
+
+fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+
+    let parametros = match comando.get_parametros(){
+        Some(p) => p,
+        None => return ResultadoRedis::Error("ParametroError no hay parametros".to_string())
+    };
+    if !parametros.contains(&"by".to_string()) {
+        return sort_elemento_con_pesos_interno(parametros,bdd);
+    }else {
+        return sort_elemento_con_pesos_externos(parametros,bdd);
+    }
+}
+
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::base_de_datos::TipoRedis;
-    use regex::Regex;
+    //use regex::Regex;
     use std::collections::HashSet;
     use std::thread;
     use std::time::Duration;
@@ -493,5 +602,127 @@ mod tests {
         };
         assert!(valor.contains(&ResultadoRedis::BulkStr("hallo".to_string())));
         assert!(valor.contains(&ResultadoRedis::BulkStr("hello".to_string())));
+    }
+
+    #[test]
+    fn sort_ordena_los_elementos_numericos_en_una_lista(){
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("mylist".to_string(),TipoRedis::Lista(
+            vec!["5".to_string(),"3".to_string(),"4".to_string(),"2".to_string()])
+        );
+        let mut comando = ComandoInfo::new(vec!["sort".to_string(), "mylist".to_string()]);
+        let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
+        assert_eq!(valor,ResultadoRedis::Vector(
+            vec![ResultadoRedis::StrSimple("2".to_string()),
+            ResultadoRedis::StrSimple("3".to_string()),
+            ResultadoRedis::StrSimple("4".to_string()),
+            ResultadoRedis::StrSimple("5".to_string())]));
+    }
+
+    #[test]
+    fn sort_ordena_los_elementos_alphanumerico_en_una_lista(){
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("mylist".to_string(),TipoRedis::Lista(
+            vec!["5".to_string(),"3".to_string(),"a".to_string(),"4".to_string(),"2".to_string()])
+        );
+        let mut comando = ComandoInfo::new(vec!["sort".to_string(), "mylist".to_string(),"alpha".to_string()]);
+        let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
+        assert_eq!(valor,ResultadoRedis::Vector(
+            vec![ResultadoRedis::StrSimple("2".to_string()),
+            ResultadoRedis::StrSimple("3".to_string()),
+            ResultadoRedis::StrSimple("4".to_string()),
+            ResultadoRedis::StrSimple("5".to_string()),
+            ResultadoRedis::StrSimple("a".to_string())]));
+    }
+
+    #[test]
+    fn sort_devuelve_un_error_si_no_esta_el_parametro_alpha_en_una_lista_de_palabras(){
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("mylist".to_string(),TipoRedis::Lista(
+            vec!["a".to_string(),"c".to_string(),"d".to_string(),"z".to_string(),"b".to_string()])
+        );
+        let mut comando = ComandoInfo::new(vec!["sort".to_string(), "mylist".to_string()]);
+        let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
+        assert_eq!(valor,ResultadoRedis::Error("ERR One or more scores can't be converted into double".to_string()));
+    }
+
+    #[test]
+    fn sort_ordena_los_elementos_si_esta_el_parametro_alpha_en_una_lista_de_palabras(){
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("mylist".to_string(),TipoRedis::Lista(
+            vec!["a".to_string(),"c".to_string(),"d".to_string(),"z".to_string(),"b".to_string()])
+        );
+        let mut comando = ComandoInfo::new(vec!["sort".to_string(), "mylist".to_string(),"alpha".to_string()]);
+        let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
+        assert_eq!(valor,ResultadoRedis::Vector(
+            vec![ResultadoRedis::StrSimple("a".to_string()),
+            ResultadoRedis::StrSimple("b".to_string()),
+            ResultadoRedis::StrSimple("c".to_string()),
+            ResultadoRedis::StrSimple("d".to_string()),
+            ResultadoRedis::StrSimple("z".to_string())]));
+    }
+
+    #[test]
+    fn sort_ordena_los_elementos_en_orden_descendiente_en_una_lista_de_numeros_si_esta_la_clave_desc(){
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("mylist".to_string(),TipoRedis::Lista(
+            vec!["5".to_string(),"3".to_string(),"4".to_string(),"2".to_string()])
+        );
+        let mut comando = ComandoInfo::new(vec!["sort".to_string(), "mylist".to_string(),"desc".to_string()]);
+        let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
+        assert_eq!(valor,ResultadoRedis::Vector(
+            vec![ResultadoRedis::StrSimple("5".to_string()),
+            ResultadoRedis::StrSimple("4".to_string()),
+            ResultadoRedis::StrSimple("3".to_string()),
+            ResultadoRedis::StrSimple("2".to_string())]));
+    }
+
+    #[test]
+    fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_el_rango_pedido(){
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("mylist".to_string(),TipoRedis::Lista(
+            vec!["5".to_string(),"3".to_string(),"4".to_string(),"2".to_string()])
+        );
+        let mut comando = ComandoInfo::new(vec!["sort".to_string(), "mylist".to_string(),
+                                        "limit".to_string(), "0".to_string(),"2".to_string()]);
+        let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
+        assert_eq!(valor,ResultadoRedis::Vector(
+            vec![ResultadoRedis::StrSimple("2".to_string()),
+            ResultadoRedis::StrSimple("3".to_string()),
+            ResultadoRedis::StrSimple("4".to_string())]));
+    }
+
+    #[test]
+    fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_otro_rango(){
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("mylist".to_string(),TipoRedis::Lista(
+            vec!["5".to_string(),"3".to_string(),"4".to_string(),"2".to_string(),"6".to_string()])
+        );
+        let mut comando = ComandoInfo::new(vec!["sort".to_string(), "mylist".to_string(),
+                                        "limit".to_string(), "-2".to_string(),"8".to_string()]);
+        let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
+        assert_eq!(valor,ResultadoRedis::Vector(
+            vec![ResultadoRedis::StrSimple("2".to_string()),
+            ResultadoRedis::StrSimple("3".to_string()),
+            ResultadoRedis::StrSimple("4".to_string()),
+            ResultadoRedis::StrSimple("5".to_string()),
+            ResultadoRedis::StrSimple("6".to_string())]));
+    }
+
+    #[test]
+    fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_rango_menos_uno_menos_diez(){
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor("mylist".to_string(),TipoRedis::Lista(
+            vec!["5".to_string(),"3".to_string(),"4".to_string(),"2".to_string(),"6".to_string()])
+        );
+        let mut comando = ComandoInfo::new(vec!["sort".to_string(), "mylist".to_string(),
+                                        "limit".to_string(), "-1".to_string(),"-10".to_string()]);
+        let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
+        assert_eq!(valor,ResultadoRedis::Vector(
+            vec![ResultadoRedis::StrSimple("2".to_string()),
+            ResultadoRedis::StrSimple("3".to_string()),
+            ResultadoRedis::StrSimple("4".to_string()),
+            ResultadoRedis::StrSimple("5".to_string()),
+            ResultadoRedis::StrSimple("6".to_string())]));
     }
 }
