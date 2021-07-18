@@ -35,9 +35,12 @@ impl ComandoHandler for ComandoListHandler {
         (self.a_ejecutar)(&mut self.comando, bdd)
     }
 }
-#[allow(dead_code)]
+
 pub fn es_comando_list(comando: &str) -> bool {
-    let comandos = vec!["LINDEX", "LPOP", "RPOP", "LPUSH", "LPUSHX", "RPUSH", "RPUSHX", "LRANGE", "LREM", "LSET", "LLEN"];
+    let comandos = vec![
+        "LINDEX", "LPOP", "RPOP", "LPUSH", "LPUSHX", "RPUSH", "RPUSHX", "LRANGE", "LREM", "LSET",
+        "LLEN",
+    ];
     comandos.iter().any(|&c| c == comando)
 }
 

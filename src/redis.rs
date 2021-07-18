@@ -1,13 +1,13 @@
-use crate::redis_error::RedisError;
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis};
+use crate::cliente::{Cliente, Token};
 use crate::comando::crear_comando_handler;
 use crate::comando_info::ComandoInfo;
 use crate::log_handler::Mensaje;
 use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_respuesta;
 use crate::parser::Parser;
+use crate::redis_error::RedisError;
 use crate::Config;
-use crate::cliente::{Token, Cliente};
 
 use std::net::TcpListener;
 use std::sync::mpsc::channel;
@@ -16,7 +16,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 extern crate redis;
-
 
 pub struct Redis {
     direccion: String,
@@ -99,7 +98,6 @@ fn manejar_cliente(
     tabla: Arc<Mutex<BaseDeDatos>>,
     logger: &Logger,
 ) -> Result<(), RedisError> {
-
     loop {
         if cliente.envio_informacion() {
             let stream = match cliente.obtener_socket() {
@@ -124,7 +122,6 @@ fn manejar_cliente(
                 Ok(_) => (),
                 Err(e) => return Err(e),
             }
-
         } else if !cliente.esta_conectado() {
             break;
         }
@@ -132,7 +129,11 @@ fn manejar_cliente(
     Ok(())
 }
 
-fn manejar_comando(entrada: ComandoInfo, cliente: Cliente, tabla: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+fn manejar_comando(
+    entrada: ComandoInfo,
+    cliente: Cliente,
+    tabla: Arc<Mutex<BaseDeDatos>>,
+) -> ResultadoRedis {
     let handler = crear_comando_handler(entrada, cliente);
     handler.ejecutar(tabla)
 }

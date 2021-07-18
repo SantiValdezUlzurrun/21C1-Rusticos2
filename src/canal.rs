@@ -2,11 +2,10 @@ use crate::cliente::Cliente;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Canal {
-    suscriptores: Vec<Cliente>
+    suscriptores: Vec<Cliente>,
 }
 
 impl Canal {
-
     pub fn new() -> Self {
         Canal {
             suscriptores: Vec::new(),
@@ -18,14 +17,22 @@ impl Canal {
     }
 
     pub fn publicar(&mut self, mensaje: String) -> usize {
+        let mut publicados: usize = 0;
         for suscriptor in &mut self.suscriptores {
-            suscriptor.enviar(mensaje.clone());
+            match suscriptor.enviar(mensaje.clone()) {
+                Ok(_) => publicados += 1,
+                Err(_) => continue,
+            }
         }
-        self.suscriptores.len()
+        publicados
     }
 
     pub fn desuscribirse(&mut self, suscriptor: Cliente) {
-        let index = self.suscriptores.iter().position(|x| *x == suscriptor).unwrap();
+        let index = self
+            .suscriptores
+            .iter()
+            .position(|x| *x == suscriptor)
+            .unwrap();
         self.suscriptores.remove(index);
     }
 

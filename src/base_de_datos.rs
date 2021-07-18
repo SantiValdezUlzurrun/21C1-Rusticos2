@@ -1,7 +1,6 @@
+use crate::canal::Canal;
 use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::valor::Valor;
-use crate::canal::Canal;
-use crate::cliente::Cliente;
 
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
@@ -24,7 +23,7 @@ pub enum TipoRedis {
     Str(String),
     Lista(Vec<String>),
     Set(HashSet<String>),
-    Canal(Canal)
+    Canal(Canal),
 }
 
 pub struct BaseDeDatos {
@@ -170,7 +169,7 @@ impl BaseDeDatos {
     }
 
     pub fn canales_activos(&self, re: &str) -> Vec<String> {
-        let canales: Vec<String> = Vec::new();
+        let mut canales: Vec<String> = Vec::new();
         let claves = self.claves(re);
         for clave in &claves {
             let canal = match self.obtener_valor(clave) {

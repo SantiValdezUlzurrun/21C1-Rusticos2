@@ -37,7 +37,6 @@ impl ComandoHandler for ComandoKeyHandler {
     }
 }
 
-#[allow(dead_code)]
 pub fn es_comando_key(comando: &str) -> bool {
     let comandos = vec!["COPY", "DEL", "EXISTS", "RENAME", "TYPE"];
     comandos.iter().any(|&c| c == comando)

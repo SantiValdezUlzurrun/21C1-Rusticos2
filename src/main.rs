@@ -1,8 +1,11 @@
 mod base_de_datos;
+mod canal;
+mod cliente;
 mod comando;
 mod comando_info;
 mod comando_key_handler;
 mod comando_list_handler;
+mod comando_pubsub_handler;
 mod comando_set_handler;
 mod comando_string_handler;
 mod log_handler;
@@ -11,9 +14,6 @@ mod persistencia;
 mod redis;
 mod redis_error;
 mod valor;
-mod canal;
-mod cliente;
-mod comando_pubsub_handler;
 
 use crate::parser::parsear_int;
 use crate::redis::Redis;

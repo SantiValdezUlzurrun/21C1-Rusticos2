@@ -30,7 +30,7 @@ impl ComandoHandler for ComandoSetHandler {
         (self.a_ejecutar)(&mut self.comando, bdd)
     }
 }
-#[allow(dead_code)]
+
 pub fn es_comando_set(comando: &str) -> bool {
     let comandos = vec!["SADD", "SCARD"];
     comandos.iter().any(|&c| c == comando)

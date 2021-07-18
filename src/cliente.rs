@@ -3,7 +3,6 @@ use crate::redis_error::RedisError;
 use std::io::Write;
 use std::net::TcpStream;
 
-
 pub type Token = i64;
 
 #[derive(Debug)]
@@ -13,9 +12,8 @@ pub struct Cliente {
 }
 
 impl Cliente {
-
     pub fn new(id: Token, socket: TcpStream) -> Self {
-        Cliente{
+        Cliente {
             id,
             socket: Some(socket),
         }
@@ -29,7 +27,7 @@ impl Cliente {
 
         match socket.local_addr() {
             Ok(a) => format!("Token: {} IP: ", self.id) + &a.to_string(),
-            Err(_) => format!("Token: {}", self.id)
+            Err(_) => format!("Token: {}", self.id),
         }
     }
 
@@ -69,7 +67,7 @@ impl Cliente {
         }
     }
 
-    pub fn enviar(&mut self, mensaje: String) -> Result<(), RedisError>{
+    pub fn enviar(&mut self, mensaje: String) -> Result<(), RedisError> {
         let socket = match &mut self.socket {
             None => return Err(RedisError::ConeccionError),
             Some(t) => t,
@@ -97,4 +95,4 @@ impl PartialEq for Cliente {
     }
 }
 
-impl Eq for Cliente { }
+impl Eq for Cliente {}

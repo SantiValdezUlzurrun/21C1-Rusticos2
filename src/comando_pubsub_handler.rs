@@ -1,8 +1,8 @@
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
-use crate::comando::ComandoHandler;
-use crate::comando_info::ComandoInfo;
 use crate::canal::Canal;
 use crate::cliente::Cliente;
+use crate::comando::ComandoHandler;
+use crate::comando_info::ComandoInfo;
 use std::sync::{Arc, Mutex};
 
 pub type ComandoConCliente =
@@ -36,13 +36,17 @@ impl ComandoHandler for ComandoPubSubHandler {
     }
 }
 
+#[allow(dead_code)]
 pub fn es_comando_pubsub(comando: &str) -> bool {
     let comandos = vec!["SUBSCRIBE"];
     comandos.iter().any(|&c| c == comando)
 }
 
-fn subscribe(comando: &mut ComandoInfo, cliente: Cliente, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-
+fn subscribe(
+    comando: &mut ComandoInfo,
+    cliente: Cliente,
+    bdd: Arc<Mutex<BaseDeDatos>>,
+) -> ResultadoRedis {
     let mut resultado = ResultadoRedis::Int(0);
 
     while let Some(clave) = comando.get_parametro() {
@@ -54,14 +58,19 @@ fn subscribe(comando: &mut ComandoInfo, cliente: Cliente, bdd: Arc<Mutex<BaseDeD
 
         canal.suscribirse(cliente.clone());
 
-        bdd.lock().unwrap().guardar_valor(clave,TipoRedis::Canal(canal));
+        bdd.lock()
+            .unwrap()
+            .guardar_valor(clave, TipoRedis::Canal(canal));
         resultado = ResultadoRedis::Int(1);
     }
     resultado
 }
 
-fn unsubscribe(comando: &mut ComandoInfo, cliente: Cliente, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-
+fn unsubscribe(
+    comando: &mut ComandoInfo,
+    cliente: Cliente,
+    bdd: Arc<Mutex<BaseDeDatos>>,
+) -> ResultadoRedis {
     let mut resultado = ResultadoRedis::Int(0);
 
     while let Some(clave) = comando.get_parametro() {
@@ -72,14 +81,19 @@ fn unsubscribe(comando: &mut ComandoInfo, cliente: Cliente, bdd: Arc<Mutex<BaseD
 
         canal.desuscribirse(cliente.clone());
 
-        bdd.lock().unwrap().guardar_valor(clave,TipoRedis::Canal(canal));
+        bdd.lock()
+            .unwrap()
+            .guardar_valor(clave, TipoRedis::Canal(canal));
         resultado = ResultadoRedis::Int(1);
     }
     resultado
 }
 
-fn publish(comando: &mut ComandoInfo, _cliente: Cliente, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-
+fn publish(
+    comando: &mut ComandoInfo,
+    _cliente: Cliente,
+    bdd: Arc<Mutex<BaseDeDatos>>,
+) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
@@ -87,7 +101,9 @@ fn publish(comando: &mut ComandoInfo, _cliente: Cliente, bdd: Arc<Mutex<BaseDeDa
 
     let mensaje = match comando.get_parametro() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string()),
+        None => {
+            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        }
     };
 
     let mut canal = match bdd.lock().unwrap().obtener_valor(&clave) {
@@ -98,8 +114,11 @@ fn publish(comando: &mut ComandoInfo, _cliente: Cliente, bdd: Arc<Mutex<BaseDeDa
     ResultadoRedis::Int(canal.publicar(mensaje) as isize)
 }
 
-fn pubsub(comando: &mut ComandoInfo, _cliente: Cliente, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-
+fn pubsub(
+    comando: &mut ComandoInfo,
+    _cliente: Cliente,
+    bdd: Arc<Mutex<BaseDeDatos>>,
+) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
         _ => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
@@ -112,35 +131,40 @@ fn pubsub(comando: &mut ComandoInfo, _cliente: Cliente, bdd: Arc<Mutex<BaseDeDat
     }
 }
 
-fn channels(comando: &mut ComandoInfo, _cliente: Cliente, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-
+fn channels(
+    comando: &mut ComandoInfo,
+    _cliente: Cliente,
+    bdd: Arc<Mutex<BaseDeDatos>>,
+) -> ResultadoRedis {
     let parametro = match comando.get_parametro() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string()),
+        None => {
+            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        }
     };
     let canales: Vec<String> = bdd.lock().unwrap().canales_activos(&parametro);
 
     ResultadoRedis::Vector(
-        canales.iter()
-               .map(|s| ResultadoRedis::BulkStr(s.to_string()))
-               .collect()
+        canales
+            .iter()
+            .map(|s| ResultadoRedis::BulkStr(s.to_string()))
+            .collect(),
     )
 }
 
-fn numsub(comando: &mut ComandoInfo, _cliente: Cliente, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-
-    let cantidades = Vec::new();
+fn numsub(
+    comando: &mut ComandoInfo,
+    _cliente: Cliente,
+    bdd: Arc<Mutex<BaseDeDatos>>,
+) -> ResultadoRedis {
+    let mut cantidades = Vec::new();
     while let Some(clave) = comando.get_parametro() {
-        let mut canal = match bdd.lock().unwrap().obtener_valor(&clave) {
+        let canal = match bdd.lock().unwrap().obtener_valor(&clave) {
             Some(TipoRedis::Canal(c)) => c.clone(),
             _ => return ResultadoRedis::Error("WrongType tipo de dato no es un canal".to_string()),
         };
 
         cantidades.push(canal.len() as isize);
     }
-    ResultadoRedis::Vector(
-        cantidades.iter()
-                  .map(|i| ResultadoRedis::Int(*i))
-                  .collect()
-    )
+    ResultadoRedis::Vector(cantidades.iter().map(|i| ResultadoRedis::Int(*i)).collect())
 }
