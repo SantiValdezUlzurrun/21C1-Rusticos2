@@ -91,10 +91,11 @@ fn getset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         .unwrap()
         .intercambiar_valor(clave, TipoRedis::Str(parametro))
     {
-        Some(TipoRedis::Lista(_)) => return ResultadoRedis::Error("WRONGTYPE".to_string()),
-        Some(TipoRedis::Set(_)) => return ResultadoRedis::Error("WRONGTYPE".to_string()),
-        Some(TipoRedis::Str(valor_enterior)) => return ResultadoRedis::StrSimple(valor_enterior),
-        None => return ResultadoRedis::Nil,
+        Some(TipoRedis::Lista(_)) => ResultadoRedis::Error("WRONGTYPE".to_string()),
+        Some(TipoRedis::Set(_)) => ResultadoRedis::Error("WRONGTYPE".to_string()),
+        Some(TipoRedis::Canal(_)) => ResultadoRedis::Error("WRONGTYPE".to_string()),
+        Some(TipoRedis::Str(valor_enterior)) => ResultadoRedis::StrSimple(valor_enterior),
+        None => ResultadoRedis::Nil,
     }
 }
 

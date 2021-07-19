@@ -38,7 +38,6 @@ impl ComandoHandler for ComandoKeyHandler {
     }
 }
 
-#[allow(dead_code)]
 pub fn es_comando_key(comando: &str) -> bool {
     let comandos = vec!["COPY", "DEL", "EXISTS", "RENAME", "TYPE"];
     comandos.iter().any(|&c| c == comando)
@@ -225,10 +224,7 @@ fn keys(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
 }
 
 fn es_parseable(num: &str) -> bool {
-    match num.parse::<i32>() {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    num.parse::<i32>().is_ok()
 }
 
 fn tiene_solo_valores_numericos(valores: Vec<String>) -> bool {
@@ -237,12 +233,11 @@ fn tiene_solo_valores_numericos(valores: Vec<String>) -> bool {
             return false;
         }
     }
-    return true;
+    true
 }
 
 fn selecionar_rango(parametros: Vec<String>, valores: Vec<String>) -> Option<Vec<String>> {
     let rango = parametros
-        .clone()
         .into_iter()
         .filter(|i| es_parseable(i))
         .collect::<Vec<_>>();
@@ -269,13 +264,13 @@ fn selecionar_rango(parametros: Vec<String>, valores: Vec<String>) -> Option<Vec
         index_max = count as usize + offset as usize - 1;
     }
 
-    return Some(valores[index_min..=index_max].to_vec());
+    Some(valores[index_min..=index_max].to_vec())
 }
 
 fn sort_elemento_con_pesos_interno(
     mut valores: Vec<String>,
     parametros: Vec<String>,
-    bdd: Arc<Mutex<BaseDeDatos>>
+    bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
     if !parametros.contains(&"alpha".to_string()) {
         match tiene_solo_valores_numericos(valores.clone()) {
@@ -288,7 +283,7 @@ fn sort_elemento_con_pesos_interno(
         }
     }
     valores.sort();
-    return sort_configuracion_lista_ordenada(parametros,valores,bdd);
+    sort_configuracion_lista_ordenada(parametros, valores, bdd)
 }
 
 fn obetener_tupla_valor_peso(
@@ -297,20 +292,20 @@ fn obetener_tupla_valor_peso(
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> Option<Vec<(String, String)>> {
     let mut tuplas: Vec<(String, String)> = vec![];
-    for i in 0..valores.len() {
-        let mut split_valor = valores[i].rsplit("_");
+    for valor in &valores {
+        let mut split_valor = valor.rsplit('_');
         let indice_valor = split_valor.next();
 
-        for j in 0..pesos.len() {
-            let mut indice_peso = pesos[j].rsplit("_");
+        for peso in &pesos {
+            let mut indice_peso = peso.rsplit('_');
             let indice_peso = indice_peso.next();
 
             if indice_peso == indice_valor {
-                let peso = match bdd.lock().unwrap().obtener_valor(&pesos[j]) {
+                let peso = match bdd.lock().unwrap().obtener_valor(&peso) {
                     Some(TipoRedis::Str(peso)) => peso.clone(),
                     _ => return None,
                 };
-                tuplas.push((valores[i].clone(), peso.to_string()))
+                tuplas.push((valor.clone(), peso.to_string()))
             }
         }
     }
@@ -322,7 +317,6 @@ fn sort_configuracion_lista_ordenada(
     mut valores: Vec<String>,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-
     if parametros.contains(&"desc".to_string()) {
         valores.reverse();
     }
@@ -353,7 +347,6 @@ fn sort_configuracion_lista_ordenada(
             .collect::<Vec<ResultadoRedis>>(),
     )
 }
-
 
 fn sort_elemento_con_pesos_externos(
     valores: Vec<String>,
@@ -388,19 +381,16 @@ fn sort_elemento_con_pesos_externos(
         for valor in &tuplas {
             for objeto in &objetos {
                 if objeto.contains(&valor.0) {
-                    match bdd.lock().unwrap().obtener_valor(&objeto) {
-                        Some(TipoRedis::Str(valor)) => {
-                            pusheado = true;
-                            resultado.push(ResultadoRedis::StrSimple(valor.to_string()))
-                        }
-                        _ => {}
+                    if let Some(TipoRedis::Str(valor)) = bdd.lock().unwrap().obtener_valor(&objeto)
+                    {
+                        pusheado = true;
+                        resultado.push(ResultadoRedis::StrSimple(valor.to_string()))
                     }
                 }
             }
             if !pusheado {
                 resultado.push(ResultadoRedis::Nil);
             }
-            
         }
         return ResultadoRedis::Vector(resultado);
     }
@@ -410,7 +400,7 @@ fn sort_elemento_con_pesos_externos(
         .map(|x| x.0.to_string())
         .collect::<Vec<String>>();
 
-    return sort_configuracion_lista_ordenada(parametros,resultado,bdd);
+    sort_configuracion_lista_ordenada(parametros, resultado, bdd)
 }
 
 fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
@@ -426,6 +416,7 @@ fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
             .map(|x| x.to_string())
             .collect::<Vec<String>>(),
         Some(&TipoRedis::Str(_)) => return ResultadoRedis::Error("WRONGTYPE".to_string()),
+        Some(TipoRedis::Canal(_)) => return ResultadoRedis::Error("WRONGTYPE".to_string()),
         None => return ResultadoRedis::Vector(vec![]),
     };
 
@@ -434,9 +425,9 @@ fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
     }
 
     if parametros.contains(&"by".to_string()) {
-        return sort_elemento_con_pesos_externos(valores, parametros, bdd);
+        sort_elemento_con_pesos_externos(valores, parametros, bdd)
     } else {
-        return sort_elemento_con_pesos_interno(valores, parametros, bdd);
+        sort_elemento_con_pesos_interno(valores, parametros, bdd)
     }
 }
 
@@ -444,7 +435,6 @@ fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
 mod tests {
     use super::*;
     use crate::base_de_datos::TipoRedis;
-    //use regex::Regex;
     use std::collections::HashSet;
     use std::thread;
     use std::time::Duration;

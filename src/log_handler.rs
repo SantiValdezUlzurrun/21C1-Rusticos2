@@ -1,5 +1,5 @@
 use crate::comando_info::ComandoInfo;
-use crate::redis::RedisError;
+use crate::redis_error::RedisError;
 use std::fs::OpenOptions;
 use std::io::Write;
 
@@ -47,8 +47,8 @@ fn f_log_escritor(ruta: &str, a_logear: String) -> Result<(), String> {
     };
 
     match writeln!(archivo, "{}", a_logear.as_str()) {
-        Ok(_) => return Ok(()),
-        Err(_) => return Err("ERROR al escribir en el archivo".to_string()),
+        Ok(_) => Ok(()),
+        Err(_) => Err("ERROR al escribir en el archivo".to_string()),
     }
 }
 
@@ -66,8 +66,8 @@ fn f_log_verbose(ruta: &str, a_logear: String) -> Result<(), String> {
     println!("{}", a_logear);
 
     match writeln!(archivo, "{}", a_logear.as_str()) {
-        Ok(_) => return Ok(()),
-        Err(_) => return Err("ERROR al escribir en el archivo".to_string()),
+        Ok(_) => Ok(()),
+        Err(_) => Err("ERROR al escribir en el archivo".to_string()),
     }
 }
 pub trait LogHandler {
@@ -87,7 +87,7 @@ impl LogHandlerEscritor {
 
 impl LogHandler for LogHandlerEscritor {
     fn logear(&mut self) {
-        aplicar_funcion_log(&self.ruta, &mut self.receptor, f_log_escritor);
+        aplicar_funcion_log(&self.ruta, &self.receptor, f_log_escritor);
     }
 }
 
@@ -96,6 +96,7 @@ pub struct LogHandlerVerbose {
     receptor: Receiver<Mensaje>,
 }
 
+#[allow(dead_code)]
 impl LogHandlerVerbose {
     pub fn new(ruta: String, receptor: Receiver<Mensaje>) -> LogHandlerVerbose {
         LogHandlerVerbose { ruta, receptor }
@@ -104,7 +105,7 @@ impl LogHandlerVerbose {
 
 impl LogHandler for LogHandlerVerbose {
     fn logear(&mut self) {
-        aplicar_funcion_log(&self.ruta, &mut self.receptor, f_log_verbose);
+        aplicar_funcion_log(&self.ruta, &self.receptor, f_log_verbose);
     }
 }
 

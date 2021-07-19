@@ -1,3 +1,4 @@
+use crate::canal::Canal;
 use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::valor::Valor;
 
@@ -17,12 +18,12 @@ pub enum ResultadoRedis {
     Error(String),
 }
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq, Clone)]
 pub enum TipoRedis {
     Str(String),
     Lista(Vec<String>),
     Set(HashSet<String>),
+    Canal(Canal),
 }
 
 pub struct BaseDeDatos {
@@ -176,13 +177,29 @@ impl BaseDeDatos {
             Some(TipoRedis::Lista(_)) => return Some(TipoRedis::Lista(vec![])),
             Some(TipoRedis::Set(_)) => return Some(TipoRedis::Set(HashSet::new())),
             Some(TipoRedis::Str(valor)) => Some(TipoRedis::Str(valor.to_string())),
+            Some(TipoRedis::Canal(_)) => None,
             None => None,
         };
 
         self.hashmap.insert(clave, Valor::no_expirable(valor_nuevo));
-
-        return valor;
+        valor
     }
+
+    pub fn canales_activos(&self, re: &str) -> Vec<String> {
+        let mut canales: Vec<String> = Vec::new();
+        let claves = self.claves(re);
+        for clave in &claves {
+            let canal = match self.obtener_valor(clave) {
+                Some(TipoRedis::Canal(c)) => c,
+                _ => continue,
+            };
+            if canal.es_activo() {
+                canales.push(clave.to_string());
+            }
+        }
+        canales
+    }
+
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }

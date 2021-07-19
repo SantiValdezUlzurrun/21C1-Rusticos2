@@ -36,6 +36,14 @@ impl ComandoHandler for ComandoListHandler {
     }
 }
 
+pub fn es_comando_list(comando: &str) -> bool {
+    let comandos = vec![
+        "LINDEX", "LPOP", "RPOP", "LPUSH", "LPUSHX", "RPUSH", "RPUSHX", "LRANGE", "LREM", "LSET",
+        "LLEN",
+    ];
+    comandos.iter().any(|&c| c == comando)
+}
+
 pub fn lindex(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
