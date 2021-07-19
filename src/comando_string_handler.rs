@@ -23,6 +23,7 @@ impl ComandoStringHandler {
             "INCRBY" => incrby,
             "MGET" => mget,
             "MSET" => mset,
+            "GETSET" => getset,
             _ => set,
         };
         ComandoStringHandler {
@@ -71,6 +72,31 @@ fn set(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
         .unwrap()
         .guardar_valor(clave, TipoRedis::Str(parametro));
     ResultadoRedis::StrSimple("OK".to_string())
+}
+
+fn getset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(c) => c,
+        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    };
+    let parametro = match comando.get_parametro() {
+        Some(p) => p,
+        None => {
+            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        }
+    };
+
+    match bdd
+        .lock()
+        .unwrap()
+        .intercambiar_valor(clave, TipoRedis::Str(parametro))
+    {
+        Some(TipoRedis::Lista(_)) => ResultadoRedis::Error("WRONGTYPE".to_string()),
+        Some(TipoRedis::Set(_)) => ResultadoRedis::Error("WRONGTYPE".to_string()),
+        Some(TipoRedis::Canal(_)) => ResultadoRedis::Error("WRONGTYPE".to_string()),
+        Some(TipoRedis::Str(valor_enterior)) => ResultadoRedis::StrSimple(valor_enterior),
+        None => ResultadoRedis::Nil,
+    }
 }
 
 fn append(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
@@ -741,5 +767,76 @@ mod tests {
         assert_eq!(None, ptr_hash.lock().unwrap().obtener_valor("clave1"));
         assert_eq!(None, ptr_hash.lock().unwrap().obtener_valor("clave2"));
         assert_eq!(None, ptr_hash.lock().unwrap().obtener_valor("clave3"));
+    }
+
+    #[test]
+    fn getset_devuelve_el_antiguo_valor_almacenado() {
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+
+        bdd.guardar_valor("clave".to_string(), TipoRedis::Str("clave".to_string()));
+        let ptr_hash = Arc::new(Mutex::new(bdd));
+        let ptr_hash1 = Arc::clone(&ptr_hash);
+
+        let mut comando = ComandoInfo::new(vec![
+            "GETSET".to_string(),
+            "clave".to_string(),
+            "nueva_clave".to_string(),
+        ]);
+
+        assert_eq!(
+            ResultadoRedis::StrSimple("clave".to_string()),
+            getset(&mut comando, ptr_hash1)
+        );
+
+        assert_eq!(
+            Some(&TipoRedis::Str("nueva_clave".to_string())),
+            ptr_hash.lock().unwrap().obtener_valor("clave")
+        );
+    }
+
+    #[test]
+    fn getset_devuelve_el_nil_si_no_existia_esa_clave() {
+        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+
+        let ptr_hash = Arc::new(Mutex::new(bdd));
+        let ptr_hash1 = Arc::clone(&ptr_hash);
+
+        let mut comando = ComandoInfo::new(vec![
+            "GETSET".to_string(),
+            "clave".to_string(),
+            "nueva_clave".to_string(),
+        ]);
+
+        assert_eq!(ResultadoRedis::Nil, getset(&mut comando, ptr_hash1));
+
+        assert_eq!(
+            Some(&TipoRedis::Str("nueva_clave".to_string())),
+            ptr_hash.lock().unwrap().obtener_valor("clave")
+        );
+    }
+
+    #[test]
+    fn getset_devuelve_error_porque_la_clave_no_corresponde_a_un_string() {
+        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+
+        bdd.guardar_valor("clave".to_string(), TipoRedis::Lista(vec![]));
+        let ptr_hash = Arc::new(Mutex::new(bdd));
+        let ptr_hash1 = Arc::clone(&ptr_hash);
+
+        let mut comando = ComandoInfo::new(vec![
+            "GETSET".to_string(),
+            "clave".to_string(),
+            "nueva_clave".to_string(),
+        ]);
+
+        assert_eq!(
+            ResultadoRedis::Error("WRONGTYPE".to_string()),
+            getset(&mut comando, ptr_hash1)
+        );
+
+        assert_eq!(
+            Some(&TipoRedis::Lista(vec![])),
+            ptr_hash.lock().unwrap().obtener_valor("clave")
+        );
     }
 }

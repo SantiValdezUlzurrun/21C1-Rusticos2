@@ -168,6 +168,23 @@ impl BaseDeDatos {
             .collect()
     }
 
+    pub fn intercambiar_valor(
+        &mut self,
+        clave: String,
+        valor_nuevo: TipoRedis,
+    ) -> Option<TipoRedis> {
+        let valor = match self.obtener_valor(&clave) {
+            Some(TipoRedis::Lista(_)) => return Some(TipoRedis::Lista(vec![])),
+            Some(TipoRedis::Set(_)) => return Some(TipoRedis::Set(HashSet::new())),
+            Some(TipoRedis::Str(valor)) => Some(TipoRedis::Str(valor.to_string())),
+            Some(TipoRedis::Canal(_)) => None,
+            None => None,
+        };
+
+        self.hashmap.insert(clave, Valor::no_expirable(valor_nuevo));
+        valor
+    }
+
     pub fn canales_activos(&self, re: &str) -> Vec<String> {
         let mut canales: Vec<String> = Vec::new();
         let claves = self.claves(re);
