@@ -85,13 +85,16 @@ fn getset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         }
     };
 
-    match bdd.lock().unwrap().intercambiar_valor(clave,TipoRedis::Str(parametro)){
+    match bdd
+        .lock()
+        .unwrap()
+        .intercambiar_valor(clave, TipoRedis::Str(parametro))
+    {
         Some(TipoRedis::Lista(_)) => return ResultadoRedis::Error("WRONGTYPE".to_string()),
         Some(TipoRedis::Set(_)) => return ResultadoRedis::Error("WRONGTYPE".to_string()),
         Some(TipoRedis::Str(valor_enterior)) => return ResultadoRedis::StrSimple(valor_enterior),
-        None => return ResultadoRedis::Nil
+        None => return ResultadoRedis::Nil,
     }
-
 }
 
 fn append(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
@@ -607,7 +610,8 @@ mod tests {
     }
 
     #[test]
-    fn mget_devuelve_una_lista_con_todos_los_valores_de_las_claves_y_si_la_clave_no_existe_devuelve_nil() {
+    fn mget_devuelve_una_lista_con_todos_los_valores_de_las_claves_y_si_la_clave_no_existe_devuelve_nil(
+    ) {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
         bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
         bdd.guardar_valor("clave2".to_string(), TipoRedis::Str("2".to_string()));
@@ -764,9 +768,9 @@ mod tests {
     }
 
     #[test]
-    fn getset_devuelve_el_antiguo_valor_almacenado(){
+    fn getset_devuelve_el_antiguo_valor_almacenado() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
-                
+
         bdd.guardar_valor("clave".to_string(), TipoRedis::Str("clave".to_string()));
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
@@ -774,7 +778,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "GETSET".to_string(),
             "clave".to_string(),
-            "nueva_clave".to_string()
+            "nueva_clave".to_string(),
         ]);
 
         assert_eq!(
@@ -789,22 +793,19 @@ mod tests {
     }
 
     #[test]
-    fn getset_devuelve_el_nil_si_no_existia_esa_clave(){
+    fn getset_devuelve_el_nil_si_no_existia_esa_clave() {
         let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
-                
+
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
 
         let mut comando = ComandoInfo::new(vec![
             "GETSET".to_string(),
             "clave".to_string(),
-            "nueva_clave".to_string()
+            "nueva_clave".to_string(),
         ]);
 
-        assert_eq!(
-            ResultadoRedis::Nil,
-            getset(&mut comando, ptr_hash1)
-        );
+        assert_eq!(ResultadoRedis::Nil, getset(&mut comando, ptr_hash1));
 
         assert_eq!(
             Some(&TipoRedis::Str("nueva_clave".to_string())),
@@ -813,9 +814,9 @@ mod tests {
     }
 
     #[test]
-    fn getset_devuelve_error_porque_la_clave_no_corresponde_a_un_string(){
+    fn getset_devuelve_error_porque_la_clave_no_corresponde_a_un_string() {
         let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
-                
+
         bdd.guardar_valor("clave".to_string(), TipoRedis::Lista(vec![]));
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
@@ -823,7 +824,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "GETSET".to_string(),
             "clave".to_string(),
-            "nueva_clave".to_string()
+            "nueva_clave".to_string(),
         ]);
 
         assert_eq!(
