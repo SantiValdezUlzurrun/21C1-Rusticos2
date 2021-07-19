@@ -23,6 +23,7 @@ impl ComandoStringHandler {
             "INCRBY" => incrby,
             "MGET" => mget,
             "MSET" => mset,
+            "GETSET" => getset,
             _ => set,
         };
         ComandoStringHandler {

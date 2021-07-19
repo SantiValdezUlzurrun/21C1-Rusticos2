@@ -22,6 +22,7 @@ impl ComandoKeyHandler {
             "TTL" => ttl,
             "TOUCH" => touch,
             "KEYS" => keys,
+            "SORT" => sort,
             _ => tipo,
         };
         ComandoKeyHandler {
