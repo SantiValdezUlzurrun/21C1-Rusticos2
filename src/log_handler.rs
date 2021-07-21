@@ -96,7 +96,6 @@ pub struct LogHandlerVerbose {
     receptor: Receiver<Mensaje>,
 }
 
-#[allow(dead_code)]
 impl LogHandlerVerbose {
     pub fn new(ruta: String, receptor: Receiver<Mensaje>) -> LogHandlerVerbose {
         LogHandlerVerbose { ruta, receptor }
