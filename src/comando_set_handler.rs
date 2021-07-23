@@ -54,7 +54,7 @@ fn sadd(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
             bdd.guardar_valor(clave, TipoRedis::Set(a_agregar));
             ResultadoRedis::Int(cantidad_ingresada as isize)
         }
-        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
     }
 }
 
@@ -88,7 +88,7 @@ fn scard(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRe
                     .to_string(),
             ),
         },
-        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
     }
 }
 
@@ -113,7 +113,7 @@ fn sismember(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resulta
                     .to_string(),
             ),
         },
-        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
     }
 }
 
@@ -138,7 +138,7 @@ fn smembers(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
                     .to_string(),
             ),
         },
-        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
     }
 }
 
@@ -161,7 +161,7 @@ fn srem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
             bdd.guardar_valor(clave, TipoRedis::Set(a_agregar));
             ResultadoRedis::Int(cantidad_eliminada as isize)
         }
-        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
     }
 }
 
