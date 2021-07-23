@@ -41,20 +41,21 @@ fn sadd(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
         Some(clave) => clave,
         None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
     };
-
-    let (a_agregar, cantidad_ingresada) =
-        match bdd.lock().unwrap().obtener_valor(&clave) {
-            Some(TipoRedis::Set(set)) => aggregar_al_set(comando, &mut set.clone()),
-            None => aggregar_al_set(comando, &mut HashSet::new()),
-            _ => return ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+    match bdd.lock() {
+        Ok(mut bdd) => {
+            let (a_agregar, cantidad_ingresada) = match bdd.obtener_valor(&clave){
+                Some(TipoRedis::Set(set)) => aggregar_al_set(comando, &mut set.clone()),
+                None => aggregar_al_set(comando, &mut HashSet::new()),
+                _ => return ResultadoRedis::Error(
+                    "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
                     .to_string(),
-            ),
-        };
-    bdd.lock()
-        .unwrap()
-        .guardar_valor(clave, TipoRedis::Set(a_agregar));
-    ResultadoRedis::Int(cantidad_ingresada as isize)
+                    ),
+            };
+            bdd.guardar_valor(clave, TipoRedis::Set(a_agregar));
+            ResultadoRedis::Int(cantidad_ingresada as isize)
+        }
+        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    }
 }
 
 fn aggregar_al_set(
@@ -78,13 +79,16 @@ fn scard(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRe
         None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
     };
 
-    match bdd.lock().unwrap().obtener_valor(&clave) {
-        Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len() as isize),
-        None => ResultadoRedis::Int(0),
-        _ => ResultadoRedis::Error(
-            "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                .to_string(),
-        ),
+    match bdd.lock() {
+        Ok(bdd) => match bdd.obtener_valor(&clave) {
+            Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len() as isize),
+            None => ResultadoRedis::Int(0),
+            _ => ResultadoRedis::Error(
+                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                    .to_string(),
+            ),
+        },
+        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     }
 }
 
@@ -94,19 +98,22 @@ fn sismember(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resulta
         None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
     };
 
-    match bdd.lock().unwrap().obtener_valor(&clave) {
-        Some(TipoRedis::Set(set)) => {
-            let parametro = match comando.get_parametro() {
-                Some(parametro) => parametro,
-                None => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
-            };
-            ResultadoRedis::Int(if set.contains(&parametro) { 1 } else { 0 })
-        }
-        None => ResultadoRedis::Int(0),
-        _ => ResultadoRedis::Error(
-            "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                .to_string(),
-        ),
+    match bdd.lock() {
+        Ok(bdd) => match bdd.obtener_valor(&clave) {
+            Some(TipoRedis::Set(set)) => {
+                let parametro = match comando.get_parametro() {
+                    Some(parametro) => parametro,
+                    None => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
+                };
+                ResultadoRedis::Int(if set.contains(&parametro) { 1 } else { 0 })
+            }
+            None => ResultadoRedis::Int(0),
+            _ => ResultadoRedis::Error(
+                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                    .to_string(),
+            ),
+        },
+        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     }
 }
 
@@ -116,19 +123,22 @@ fn smembers(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
         None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
     };
 
-    match bdd.lock().unwrap().obtener_valor(&clave) {
-        Some(TipoRedis::Set(set)) => {
-            let mut vector = vec![];
-            for valor in set.iter() {
-                vector.push(ResultadoRedis::BulkStr(valor.clone()));
+    match bdd.lock() {
+        Ok(bdd) => match bdd.obtener_valor(&clave) {
+            Some(TipoRedis::Set(set)) => {
+                let mut vector = vec![];
+                for valor in set.iter() {
+                    vector.push(ResultadoRedis::BulkStr(valor.clone()));
+                }
+                ResultadoRedis::Vector(vector)
             }
-            ResultadoRedis::Vector(vector)
-        }
-        None => ResultadoRedis::Vector(vec![]),
-        _ => ResultadoRedis::Error(
-            "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                .to_string(),
-        ),
+            None => ResultadoRedis::Vector(vec![]),
+            _ => ResultadoRedis::Error(
+                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                    .to_string(),
+            ),
+        },
+        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     }
 }
 
@@ -138,20 +148,21 @@ fn srem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
         None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
     };
 
-    let (a_agregar, cantidad_eliminada) =
-        match bdd.lock().unwrap().obtener_valor(&clave) {
-            Some(TipoRedis::Set(set)) => eliminar_del_set(comando, &mut set.clone()),
-            None => return ResultadoRedis::Int(0),
-            _ => return ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+    match bdd.lock() {
+        Ok(mut bdd) => {
+            let (a_agregar, cantidad_eliminada) =match bdd.obtener_valor(&clave) {
+                Some(TipoRedis::Set(set)) => eliminar_del_set(comando, &mut set.clone()),
+                None => return ResultadoRedis::Int(0),
+                _ => return ResultadoRedis::Error(
+                    "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
                     .to_string(),
-            ),
-        };
-
-    bdd.lock()
-        .unwrap()
-        .guardar_valor(clave, TipoRedis::Set(a_agregar));
-    ResultadoRedis::Int(cantidad_eliminada as isize)
+                    ),
+            };
+            bdd.guardar_valor(clave, TipoRedis::Set(a_agregar));
+            ResultadoRedis::Int(cantidad_eliminada as isize)
+        }
+        Err(_) => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+    }
 }
 
 fn eliminar_del_set(
