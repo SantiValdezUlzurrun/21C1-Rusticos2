@@ -40,23 +40,6 @@ pub struct BaseDeDatos {
 }
 
 impl BaseDeDatos {
-    /*
-    pub fn new(archivo_persistencia: String) -> Self {
-        let (tx, rx) = channel();
-        let mut handler = PersistidorHandler::new(archivo_persistencia, 1, rx);
-
-        let hilo_persistencia = thread::spawn(move || {
-            handler.persistir();
-        });
-
-        BaseDeDatos {
-            hashmap: HashMap::new(),
-            persistidor: Persistidor::new(tx.clone()),
-            hilo: Option::Some(hilo_persistencia),
-            tx,
-        }
-    }*/
-
     pub fn obtener_valor(&self, clave: &str) -> Option<&TipoRedis> {
         match self.hashmap.get(clave) {
             Some(v) => v.get(),
@@ -240,9 +223,9 @@ impl BaseDeDatos {
             let mut param = v
                 .iter()
                 .filter(|x| {
-                    !x.to_string().contains("$")
-                        && !x.to_string().contains("*")
-                        && !x.to_string().contains("\n")
+                    !x.to_string().contains('$')
+                        && !x.to_string().contains('*')
+                        && !x.to_string().contains('\n')
                 })
                 .collect::<Vec<_>>();
 
@@ -274,7 +257,7 @@ impl BaseDeDatos {
             }
         }
         BaseDeDatos {
-            hashmap: hashmap,
+            hashmap,
             persistidor: Persistidor::new(tx.clone()),
             hilo: Option::Some(hilo_persistencia),
             tx,
