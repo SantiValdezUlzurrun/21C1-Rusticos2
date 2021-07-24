@@ -2,7 +2,6 @@ use crate::base_de_datos::{BaseDeDatos, ResultadoRedis};
 use crate::cliente::{Cliente, Token};
 use crate::comando::crear_comando_handler;
 use crate::comando_info::ComandoInfo;
-use crate::log_handler::LogHandlerEscritor;
 use crate::log_handler::Mensaje;
 use crate::log_handler::{LogHandler, Logger};
 use crate::parser::parsear_respuesta;
@@ -32,7 +31,8 @@ pub struct Redis {
 impl Redis {
     pub fn new(config: Config) -> Self {
         let (tx, rx) = channel();
-        let mut handler = LogHandlerEscritor::new(config.logfile, rx);
+
+        let mut handler: LogHandler = LogHandler::new(config.logfile, rx, config.verbose);
 
         let hilo_log = thread::spawn(move || {
             handler.logear();

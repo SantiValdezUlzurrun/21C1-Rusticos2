@@ -1,6 +1,7 @@
 use crate::comando_info::ComandoInfo;
 use crate::redis_error::RedisError;
 use std::fs::OpenOptions;
+use std::io::Result;
 use std::io::Write;
 
 use std::sync::mpsc::{Receiver, Sender};
@@ -9,50 +10,82 @@ pub enum Mensaje {
     InfoComando(String, ComandoInfo),
     InfoError(String, RedisError),
     InfoConeccion(String, String),
+    #[allow(dead_code)]
+    SetVerbose(bool),
     Cerrar,
 }
 
-pub fn aplicar_funcion_log(
-    ruta: &str,
-    receptor: &std::sync::mpsc::Receiver<Mensaje>,
-    funcion_log: fn(&str, String) -> Result<(), String>,
-) {
-    while let Ok(mensaje) = receptor.recv() {
-        let a_logear = match mensaje {
-            Mensaje::InfoComando(addr, comando_info) => addr + " " + &comando_info.descripcion(),
+pub struct LogHandler {
+    ruta: String,
+    receptor: Receiver<Mensaje>,
+    tipo: Box<dyn TipoLog + Send>,
+}
 
-            Mensaje::InfoError(addr, error) => addr + " " + &error.to_string(),
+impl LogHandler {
+    pub fn new(ruta: String, receptor: Receiver<Mensaje>, verbose: bool) -> Self {
+        LogHandler {
+            ruta,
+            receptor,
+            tipo: set_verbose(verbose),
+        }
+    }
 
-            Mensaje::InfoConeccion(addr, mensaje) => addr + " " + &mensaje,
+    pub fn logear(&mut self) {
+        while let Ok(mensaje) = self.receptor.recv() {
+            let a_logear = match mensaje {
+                Mensaje::InfoComando(addr, comando_info) => {
+                    addr + " " + &comando_info.descripcion()
+                }
 
-            Mensaje::Cerrar => break,
-        };
+                Mensaje::InfoError(addr, error) => addr + " " + &error.to_string(),
 
-        match funcion_log(ruta, a_logear) {
-            Ok(_) => {}
-            Err(_) => break,
+                Mensaje::InfoConeccion(addr, mensaje) => addr + " " + &mensaje,
+
+                Mensaje::SetVerbose(b) => {
+                    self.tipo = set_verbose(b);
+                    continue;
+                }
+
+                Mensaje::Cerrar => break,
+            };
+
+            match self.tipo.logear(self.ruta.clone(), a_logear) {
+                Ok(_) => (),
+                Err(_) => break,
+            }
         }
     }
 }
 
-fn f_log_escritor(ruta: &str, a_logear: String) -> Result<(), String> {
-    let mut archivo = match OpenOptions::new()
-        .write(true)
-        .append(true)
-        .create(true)
-        .open(ruta)
-    {
-        Ok(archivo) => archivo,
-        Err(_) => return Err("ERROR al abrir el archivo".to_string()),
-    };
-
-    match writeln!(archivo, "{}", a_logear.as_str()) {
-        Ok(_) => Ok(()),
-        Err(_) => Err("ERROR al escribir en el archivo".to_string()),
+fn set_verbose(verbose: bool) -> Box<dyn TipoLog + Send> {
+    match verbose {
+        true => Box::new(LogVerbose),
+        false => Box::new(LogEscritor),
     }
 }
 
-fn f_log_verbose(ruta: &str, a_logear: String) -> Result<(), String> {
+trait TipoLog {
+    fn logear(&self, ruta: String, a_logear: String) -> Result<()>;
+}
+
+pub struct LogEscritor;
+
+impl TipoLog for LogEscritor {
+    fn logear(&self, ruta: String, a_logear: String) -> Result<()> {
+        escribir(&ruta, a_logear)
+    }
+}
+
+pub struct LogVerbose;
+
+impl TipoLog for LogVerbose {
+    fn logear(&self, ruta: String, a_loguear: String) -> Result<()> {
+        imprimir(a_loguear.clone());
+        escribir(&ruta, a_loguear)
+    }
+}
+
+fn escribir(ruta: &str, a_logear: String) -> Result<()> {
     let mut archivo = match OpenOptions::new()
         .write(true)
         .append(true)
@@ -60,53 +93,14 @@ fn f_log_verbose(ruta: &str, a_logear: String) -> Result<(), String> {
         .open(ruta)
     {
         Ok(archivo) => archivo,
-        Err(_) => return Err("ERROR al abrir el archivo".to_string()),
+        Err(e) => return Err(e),
     };
 
+    writeln!(archivo, "{}", a_logear.as_str())
+}
+
+fn imprimir(a_logear: String) {
     println!("{}", a_logear);
-
-    match writeln!(archivo, "{}", a_logear.as_str()) {
-        Ok(_) => Ok(()),
-        Err(_) => Err("ERROR al escribir en el archivo".to_string()),
-    }
-}
-pub trait LogHandler {
-    fn logear(&mut self);
-}
-
-pub struct LogHandlerEscritor {
-    ruta: String,
-    receptor: Receiver<Mensaje>,
-}
-
-impl LogHandlerEscritor {
-    pub fn new(ruta: String, receptor: Receiver<Mensaje>) -> LogHandlerEscritor {
-        LogHandlerEscritor { ruta, receptor }
-    }
-}
-
-impl LogHandler for LogHandlerEscritor {
-    fn logear(&mut self) {
-        aplicar_funcion_log(&self.ruta, &self.receptor, f_log_escritor);
-    }
-}
-
-pub struct LogHandlerVerbose {
-    ruta: String,
-    receptor: Receiver<Mensaje>,
-}
-
-#[allow(dead_code)]
-impl LogHandlerVerbose {
-    pub fn new(ruta: String, receptor: Receiver<Mensaje>) -> LogHandlerVerbose {
-        LogHandlerVerbose { ruta, receptor }
-    }
-}
-
-impl LogHandler for LogHandlerVerbose {
-    fn logear(&mut self) {
-        aplicar_funcion_log(&self.ruta, &self.receptor, f_log_verbose);
-    }
 }
 
 pub struct Logger {
@@ -119,20 +113,31 @@ impl Logger {
     }
 
     pub fn log_comando(&self, socket_addr: String, comando_info: ComandoInfo) {
-        self.log
+        if self
+            .log
             .send(Mensaje::InfoComando(socket_addr, comando_info))
-            .unwrap();
+            .is_ok()
+        {}
     }
 
     pub fn log_error(&self, socket_addr: String, error: RedisError) {
-        self.log
+        if self
+            .log
             .send(Mensaje::InfoError(socket_addr, error))
-            .unwrap();
+            .is_ok()
+        {}
     }
 
     pub fn log_coneccion(&self, socket_addr: String, mensaje: String) {
-        self.log
+        if self
+            .log
             .send(Mensaje::InfoConeccion(socket_addr, mensaje))
-            .unwrap();
+            .is_ok()
+        {}
+    }
+
+    #[allow(dead_code)]
+    pub fn verbose(&self, verbose: bool) {
+        if self.log.send(Mensaje::SetVerbose(verbose)).is_ok() {}
     }
 }
