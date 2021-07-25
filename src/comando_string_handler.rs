@@ -55,22 +55,71 @@ fn get(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
     }
 }
 
+fn obtener_tiempo_expiracion(parametros: Vec<String>, support: &str) -> Option<u64> {
+    match parametros.rsplit(|p| p == &support.to_string()).next() {
+        Some(c) => match c[0].clone().parse::<u64>() {
+            Ok(num) => Some(num),
+            Err(_) => None,
+        },
+        None => None,
+    }
+}
+
 fn set(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     };
+
+    let parametros = match comando.get_parametros() {
+        Some(p) => p,
+        None => {
+            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        }
+    };
+    match bdd.lock() {
+        Ok(mut bdd) => {
+            if parametros.contains(&"EX".to_string()) {
+                let expiracion = match obtener_tiempo_expiracion(parametros.clone(), "EX") {
+                    Some(e) => e,
+                    None => {
+                        return ResultadoRedis::Error("ERR SET tiempo de expiracion".to_string())
+                    }
+                };
+                bdd.guardar_valor_con_expiracion(
+                    clave,
+                    expiracion,
+                    TipoRedis::Str(parametros[1].clone()),
+                )
+            } else if parametros.contains(&"PX".to_string()) {
+                let expiracion = match obtener_tiempo_expiracion(parametros.clone(), "PX") {
+                    Some(e) => e,
+                    None => {
+                        return ResultadoRedis::Error("ERR SET tiempo de expiracion".to_string())
+                    }
+                };
+                bdd.guardar_valor_con_expiracion(
+                    clave,
+                    expiracion / 1000,
+                    TipoRedis::Str(parametros[1].clone()),
+                )
+            } else {
+                bdd.guardar_valor(clave, TipoRedis::Str(parametros[1].clone()))
+            }
+        }
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
+    /*
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
             return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
         }
     };
-
     match bdd.lock() {
-        Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Str(parametro)),
+        Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Str(parametro[1])),
         Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
-    }
+    }*/
     ResultadoRedis::StrSimple("OK".to_string())
 }
 

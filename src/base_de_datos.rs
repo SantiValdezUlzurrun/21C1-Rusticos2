@@ -54,7 +54,6 @@ impl BaseDeDatos {
         }
     }
 
-    #[allow(dead_code)]
     pub fn guardar_valor_con_expiracion(
         &mut self,
         clave: String,
@@ -227,16 +226,30 @@ impl BaseDeDatos {
                         && !x.to_string().contains('*')
                         && !x.to_string().contains('\n')
                 })
-                .collect::<Vec<_>>();
+                .collect::<Vec<_>>()
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>();
 
             param.pop();
 
-            if param[0] == &"SET" {
-                hashmap.insert(
-                    param[1].to_string(),
-                    Valor::new(TipoRedis::Str(param[2].to_string())),
-                );
-            } else if param[0] == &"LPUSH" {
+            if param.contains(&"SET".to_string()) {
+                if param.contains(&"EX".to_string()) {
+                    let tiempo = match obtener_tiempo_expiracion(param.clone(), "EX") {
+                        Some(t) => t,
+                        None => 0,
+                    };
+                    hashmap.insert(
+                        param[1].to_string(),
+                        Valor::expirable(TipoRedis::Str(param[2].to_string()), tiempo),
+                    );
+                } else {
+                    hashmap.insert(
+                        param[1].to_string(),
+                        Valor::new(TipoRedis::Str(param[2].to_string())),
+                    );
+                }
+            } else if param.contains(&"LPUSH".to_string()) {
                 param.remove(0);
                 let clave = param.remove(0).to_string();
                 hashmap.insert(
@@ -262,6 +275,15 @@ impl BaseDeDatos {
             hilo: Option::Some(hilo_persistencia),
             tx,
         }
+    }
+}
+fn obtener_tiempo_expiracion(parametros: Vec<String>, support: &str) -> Option<u64> {
+    match parametros.rsplit(|p| p == &support.to_string()).next() {
+        Some(c) => match c[0].clone().parse::<u64>() {
+            Ok(num) => Some(num),
+            Err(_) => None,
+        },
+        None => None,
     }
 }
 

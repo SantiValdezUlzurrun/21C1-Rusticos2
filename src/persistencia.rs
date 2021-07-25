@@ -13,6 +13,8 @@ use crate::valor::Valor;
 const SEPARADOR: &str = "\\r\\n";
 const FORMATO_GET: &str = "*3\\r\\n$3\\r\\nSET\\r\\n";
 const FORMATO_LPUSH: &str = "$4\\r\\nLPUSH\\r\\n";
+const FORMATO_SADD: &str = "$4\\r\\nSADD\\r\\n";
+const FORMATO_EX: &str = "$2\\r\\nEX\\r\\n";
 const ID_ARG: &str = "*";
 const ID_TAM_STR: &str = "$";
 
@@ -46,7 +48,11 @@ impl PersistidorHandler {
                         //persisto
                         let mut vector: Vec<String> = vec![];
                         for (key, val) in a_persistir.iter() {
-                            vector.push(guardar_clave_valor(key.to_string(), val.get()));
+                            vector.push(guardar_clave_valor(
+                                key.to_string(),
+                                val.get(),
+                                val.get_tiempo(),
+                            ));
                         }
                         guardar_en_archivo(&self.archivo, vector);
                         self.instante = Instant::now();
@@ -85,13 +91,24 @@ fn guardar_cant_arg(lista: &[String]) -> String {
     ID_ARG.to_string() + &cant_arg.to_string() + SEPARADOR
 }
 
-fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>) -> String {
-    match valor {
-        Some(TipoRedis::Str(valor)) => {
+fn guardar_expiracion(time: Duration) -> String {
+    FORMATO_EX.to_string() + &(time.as_secs().to_string()) + SEPARADOR
+}
+
+fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>, time: Option<Duration>) -> String {
+    match (valor, time) {
+        (Some(TipoRedis::Str(valor)), Some(duration)) => {
+            FORMATO_GET.to_string()
+                + &guardar_elemento(&clave)
+                + &guardar_elemento(&valor)
+                + &guardar_expiracion(duration)
+        }
+
+        (Some(TipoRedis::Str(valor)), None) => {
             FORMATO_GET.to_string() + &guardar_elemento(&clave) + &guardar_elemento(&valor)
         }
 
-        Some(TipoRedis::Lista(lista)) => {
+        (Some(TipoRedis::Lista(lista)), Some(_duration)) => {
             let mut string_comando =
                 guardar_cant_arg(&lista) + FORMATO_LPUSH + &guardar_elemento(&clave);
             for valor in lista.iter() {
@@ -99,6 +116,18 @@ fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>) -> String {
             }
             string_comando
         }
+
+        (Some(TipoRedis::Lista(lista)), None) => {
+            let mut string_comando =
+                guardar_cant_arg(&lista) + FORMATO_LPUSH + &guardar_elemento(&clave);
+            for valor in lista.iter() {
+                string_comando += &guardar_elemento(valor);
+            }
+            string_comando
+        }
+
+        (Some(TipoRedis::Set(_set)), Some(_duration)) => "".to_string(),
+        (Some(TipoRedis::Set(_set)), None) => "".to_string(),
         _ => String::new(),
     }
 }
@@ -153,7 +182,11 @@ mod tests {
 
         let mut vector: Vec<String> = vec![];
         for (key, val) in map.iter() {
-            vector.push(guardar_clave_valor(key.to_string(), val.get()));
+            vector.push(guardar_clave_valor(
+                key.to_string(),
+                val.get(),
+                val.get_tiempo(),
+            ));
         }
 
         assert!(vector.contains(&String::from(
@@ -197,7 +230,11 @@ mod tests {
 
         let mut vector: Vec<String> = vec![];
         for (key, val) in map.iter() {
-            vector.push(guardar_clave_valor(key.to_string(), val.get()));
+            vector.push(guardar_clave_valor(
+                key.to_string(),
+                val.get(),
+                val.get_tiempo(),
+            ));
         }
 
         assert!(vector.contains(&String::from(
