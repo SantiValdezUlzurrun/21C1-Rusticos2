@@ -18,6 +18,7 @@ const ID_TAM_STR: &str = "$";
 
 pub enum MensajePersistencia {
     Info(HashMap<String, Valor>),
+    ArchivoAPersistir(String),
     Cerrar,
 }
 
@@ -53,6 +54,8 @@ impl PersistidorHandler {
                     }
                 }
 
+                MensajePersistencia::ArchivoAPersistir(a) => self.archivo = a,
+
                 MensajePersistencia::Cerrar => break,
             };
         }
@@ -71,6 +74,12 @@ impl Persistidor {
     pub fn persistir(&self, base_de_datos: HashMap<String, Valor>) {
         self.persistidor
             .send(MensajePersistencia::Info(base_de_datos))
+            .unwrap();
+    }
+
+    pub fn cambiar_archivo(&self, ruta_nueva: String) {
+        self.persistidor
+            .send(MensajePersistencia::ArchivoAPersistir(ruta_nueva))
             .unwrap();
     }
 }

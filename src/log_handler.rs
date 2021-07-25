@@ -1,3 +1,5 @@
+use crate::canal::Canal;
+use crate::cliente::Cliente;
 use crate::comando_info::ComandoInfo;
 use crate::redis_error::RedisError;
 use std::fs::OpenOptions;
@@ -12,12 +14,15 @@ pub enum Mensaje {
     InfoConeccion(String, String),
     #[allow(dead_code)]
     SetVerbose(bool),
+    Monitor(Cliente),
+    ArchivoALogear(String),
     Cerrar,
 }
 
 pub struct LogHandler {
     ruta: String,
     receptor: Receiver<Mensaje>,
+    canal: Canal,
     tipo: Box<dyn TipoLog + Send>,
 }
 
@@ -26,6 +31,7 @@ impl LogHandler {
         LogHandler {
             ruta,
             receptor,
+            canal: Canal::new(),
             tipo: set_verbose(verbose),
         }
     }
@@ -46,8 +52,20 @@ impl LogHandler {
                     continue;
                 }
 
+                Mensaje::Monitor(c) => {
+                    self.canal.suscribirse(c);
+                    continue;
+                }
+
+                Mensaje::ArchivoALogear(a) => {
+                    self.ruta = a;
+                    continue;
+                }
+
                 Mensaje::Cerrar => break,
             };
+
+            self.canal.publicar(a_logear.clone());
 
             match self.tipo.logear(self.ruta.clone(), a_logear) {
                 Ok(_) => (),
@@ -139,5 +157,13 @@ impl Logger {
     #[allow(dead_code)]
     pub fn verbose(&self, verbose: bool) {
         if self.log.send(Mensaje::SetVerbose(verbose)).is_ok() {}
+    }
+
+    pub fn monitorear(&self, cliente: Cliente) {
+        if self.log.send(Mensaje::Monitor(cliente)).is_ok() {}
+    }
+
+    pub fn archivo(&self, ruta_nueva: String) {
+        if self.log.send(Mensaje::ArchivoALogear(ruta_nueva)).is_ok() {}
     }
 }
