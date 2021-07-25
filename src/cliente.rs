@@ -1,4 +1,6 @@
 use crate::redis_error::RedisError;
+use std::time::Duration;
+use std::time::Instant;
 
 use std::io::Write;
 use std::net::TcpStream;
@@ -8,13 +10,22 @@ pub type Token = i64;
 #[derive(Debug)]
 pub struct Cliente {
     id: Token,
+    timeout: Option<Duration>,
+    ultimo_mensaje: Instant,
     socket: Option<TcpStream>,
 }
 
 impl Cliente {
-    pub fn new(id: Token, socket: TcpStream) -> Self {
+    pub fn new(id: Token, timeout: u64, socket: TcpStream) -> Self {
+        let duracion = match timeout {
+            0 => None,
+            t => Some(Duration::from_secs(t)),
+        };
+
         Cliente {
             id,
+            timeout: duracion,
+            ultimo_mensaje: Instant::now(),
             socket: Some(socket),
         }
     }
@@ -61,13 +72,22 @@ impl Cliente {
             Some(t) => t,
         };
 
-        match socket.peek(&mut [0; 128]) {
+        let esta_conectado = match socket.peek(&mut [0; 128]) {
             Ok(len) => len != 0,
             Err(_) => false,
-        }
+        };
+
+        let paso_el_timeout = match self.timeout {
+            Some(d) => self.ultimo_mensaje.elapsed() > d,
+            None => false,
+        };
+
+        esta_conectado && !paso_el_timeout
     }
 
     pub fn enviar(&mut self, mensaje: String) -> Result<(), RedisError> {
+        self.ultimo_mensaje = Instant::now();
+
         let socket = match &mut self.socket {
             None => return Err(RedisError::ConeccionError),
             Some(t) => t,
@@ -84,6 +104,8 @@ impl Clone for Cliente {
     fn clone(&self) -> Self {
         Cliente {
             id: self.id,
+            timeout: self.timeout,
+            ultimo_mensaje: self.ultimo_mensaje,
             socket: self.obtener_socket(),
         }
     }

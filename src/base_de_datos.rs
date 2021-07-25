@@ -200,6 +200,31 @@ impl BaseDeDatos {
         canales
     }
 
+    pub fn borrar_claves(&mut self) {
+        self.hashmap = HashMap::new();
+
+        self.persistirse();
+    }
+
+    pub fn cantidad_claves(&self) -> usize {
+        self.hashmap.len()
+    }
+
+    pub fn info(&self) -> Vec<String> {
+        let mut info = Vec::new();
+        info.push("# Database".to_string());
+        info.push("".to_string());
+
+        info.push(format!("cantidad de claves:{}", self.hashmap.len()));
+        info.push(format!("capacidad:{}", self.hashmap.capacity()));
+
+        info
+    }
+
+    pub fn cambiar_archivo(&self, ruta_nueva: String) {
+        self.persistidor.cambiar_archivo(ruta_nueva);
+    }
+
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }

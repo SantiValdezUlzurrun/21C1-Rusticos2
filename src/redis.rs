@@ -18,10 +18,8 @@ use std::thread::JoinHandle;
 extern crate redis;
 
 pub struct Redis {
-    direccion: String,
+    config: Arc<Mutex<Config>>,
     bdd: Arc<Mutex<BaseDeDatos>>,
-    _verbose: bool,
-    _timeout: u32,
     tx: Sender<Mensaje>,
     hilo_log: Option<JoinHandle<()>>,
     hilos_clientes: Vec<Option<JoinHandle<()>>>,
@@ -32,17 +30,15 @@ impl Redis {
     pub fn new(config: Config) -> Self {
         let (tx, rx) = channel();
 
-        let mut handler: LogHandler = LogHandler::new(config.logfile, rx, config.verbose);
+        let mut handler: LogHandler = LogHandler::new(config.logfile(), rx, config.verbose());
 
         let hilo_log = thread::spawn(move || {
             handler.logear();
         });
 
         Redis {
-            direccion: config.host + ":" + config.port.as_str(),
-            bdd: Arc::new(Mutex::new(BaseDeDatos::new(config.dbfilename))),
-            _verbose: config.verbose,
-            _timeout: config.timeout,
+            bdd: Arc::new(Mutex::new(BaseDeDatos::new(config.dbfilename()))),
+            config: Arc::new(Mutex::new(config)),
             tx,
             hilo_log: Some(hilo_log),
             hilos_clientes: Vec::new(),
@@ -51,21 +47,26 @@ impl Redis {
     }
 
     pub fn iniciar(&mut self) -> Result<(), RedisError> {
-        let listener = match TcpListener::bind(&self.direccion) {
+        let listener = match TcpListener::bind(self.config.lock().unwrap().direccion()) {
             Ok(l) => l,
             Err(_) => return Err(RedisError::InicializacionError),
         };
 
         for stream in listener.incoming().flatten() {
             let clon_tabla = Arc::clone(&self.bdd);
+            let clon_config = Arc::clone(&self.config);
             let logger = Logger::new(self.tx.clone());
 
-            let mut cliente = Cliente::new(self.siguiente_id, stream);
+            let mut cliente = Cliente::new(
+                self.siguiente_id,
+                self.config.lock().unwrap().timeout(),
+                stream,
+            );
             self.siguiente_id += 1;
 
             let handle = thread::spawn(move || {
                 logger.log_coneccion(cliente.obtener_addr(), "Se conecto usario".to_string());
-                match manejar_cliente(&mut cliente, clon_tabla, &logger) {
+                match manejar_cliente(&mut cliente, clon_tabla, clon_config, &logger) {
                     Ok(()) => (),
                     Err(e) => manejar_error(&logger, e, cliente.obtener_addr()),
                 };
@@ -97,6 +98,7 @@ impl Drop for Redis {
 fn manejar_cliente(
     cliente: &mut Cliente,
     tabla: Arc<Mutex<BaseDeDatos>>,
+    config: Arc<Mutex<Config>>,
     logger: &Logger,
 ) -> Result<(), RedisError> {
     loop {
@@ -115,7 +117,17 @@ fn manejar_cliente(
 
             logger.log_comando(cliente.obtener_addr(), comando.clone());
 
-            let resultado = manejar_comando(comando, cliente.clone(), Arc::clone(&tabla));
+            let resultado = manejar_comando(
+                comando,
+                cliente.clone(),
+                Arc::clone(&tabla),
+                Arc::clone(&config),
+            );
+
+            config
+                .lock()
+                .unwrap()
+                .actualizar(&logger, cliente.clone(), Arc::clone(&tabla));
 
             let respuesta = parsear_respuesta(&resultado);
 
@@ -134,8 +146,9 @@ fn manejar_comando(
     entrada: ComandoInfo,
     cliente: Cliente,
     tabla: Arc<Mutex<BaseDeDatos>>,
+    config: Arc<Mutex<Config>>,
 ) -> ResultadoRedis {
-    let handler = crear_comando_handler(entrada, cliente);
+    let handler = crear_comando_handler(entrada, cliente, config);
     handler.ejecutar(tabla)
 }
 
