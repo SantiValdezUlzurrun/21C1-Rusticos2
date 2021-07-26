@@ -1,16 +1,17 @@
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis, TipoRedis};
 use crate::comando::{Comando, ComandoHandler};
+use crate::comando_info::ComandoInfo;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 pub struct ComandoSetHandler {
-    comando: Vec<String>,
+    comando: ComandoInfo,
     a_ejecutar: Comando,
 }
 
 impl ComandoSetHandler {
-    pub fn new(comando: Vec<String>) -> Self {
-        let a_ejecutar = match comando[0].as_str() {
+    pub fn new(comando: ComandoInfo) -> Self {
+        let a_ejecutar = match comando.get_nombre().as_str() {
             "SADD" => sadd,
             "SCARD" => scard,
             "SISMEMBER" => sismember,
@@ -25,106 +26,154 @@ impl ComandoSetHandler {
 }
 
 impl ComandoHandler for ComandoSetHandler {
-    fn ejecutar(self: Box<Self>, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-        (self.a_ejecutar)(&self.comando, bdd)
+    fn ejecutar(mut self: Box<Self>, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+        (self.a_ejecutar)(&mut self.comando, bdd)
     }
 }
-#[allow(dead_code)]
+
 pub fn es_comando_set(comando: &str) -> bool {
-    let comandos = vec!["SADD", "SCARD"];
+    let comandos = vec!["SADD", "SCARD", "SISMEMBER", "SMEMBERS", "SREM"];
     comandos.iter().any(|&c| c == comando)
 }
 
-fn sadd(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    let (a_agregar, cantidad_ingresada) =
-        match bdd.lock().unwrap().obtener_valor(&comando[1]) {
-            Some(TipoRedis::Set(set)) => aggregar_al_set(&comando[2..], &mut set.clone()),
-            None => aggregar_al_set(&comando[2..], &mut HashSet::new()),
-            _ => return ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+fn sadd(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(clave) => clave,
+        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+    };
+    match bdd.lock() {
+        Ok(mut bdd) => {
+            let (a_agregar, cantidad_ingresada) = match bdd.obtener_valor(&clave){
+                Some(TipoRedis::Set(set)) => aggregar_al_set(comando, &mut set.clone()),
+                None => aggregar_al_set(comando, &mut HashSet::new()),
+                _ => return ResultadoRedis::Error(
+                    "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
                     .to_string(),
-            ),
-        };
-    bdd.lock()
-        .unwrap()
-        .guardar_valor(comando[1].clone(), TipoRedis::Set(a_agregar));
-    ResultadoRedis::Int(cantidad_ingresada)
+                    ),
+            };
+            bdd.guardar_valor(clave, TipoRedis::Set(a_agregar));
+            ResultadoRedis::Int(cantidad_ingresada as isize)
+        }
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
 }
 
-fn aggregar_al_set(valores: &[String], set: &mut HashSet<String>) -> (HashSet<String>, usize) {
+fn aggregar_al_set(
+    comando: &mut ComandoInfo,
+    set: &mut HashSet<String>,
+) -> (HashSet<String>, usize) {
     let mut cantidad_ingresada = 0;
-    for valor in valores.iter() {
-        if !set.contains(valor) {
-            set.insert(valor.clone());
+
+    while let Some(parametro) = comando.get_parametro() {
+        if !set.contains(&parametro) {
+            set.insert(parametro);
             cantidad_ingresada += 1;
         }
     }
     (set.clone(), cantidad_ingresada)
 }
 
-fn scard(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
-        Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len()),
-        None => ResultadoRedis::Int(0),
-        _ => ResultadoRedis::Error(
-            "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                .to_string(),
-        ),
-    }
-}
+fn scard(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(clave) => clave,
+        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+    };
 
-fn sismember(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
-        Some(TipoRedis::Set(set)) => {
-            ResultadoRedis::Int(if set.contains(&comando[2]) { 1 } else { 0 })
-        }
-        None => ResultadoRedis::Int(0),
-        _ => ResultadoRedis::Error(
-            "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                .to_string(),
-        ),
-    }
-}
-
-fn smembers(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    match bdd.lock().unwrap().obtener_valor(&comando[1]) {
-        Some(TipoRedis::Set(set)) => {
-            let mut vector = vec![];
-            for valor in set.iter() {
-                vector.push(ResultadoRedis::BulkStr(valor.clone()));
-            }
-            ResultadoRedis::Vector(vector)
-        }
-        None => ResultadoRedis::Vector(vec![]),
-        _ => ResultadoRedis::Error(
-            "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                .to_string(),
-        ),
-    }
-}
-
-fn srem(comando: &[String], bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
-    let (a_agregar, cantidad_eliminada) =
-        match bdd.lock().unwrap().obtener_valor(&comando[1]) {
-            Some(TipoRedis::Set(set)) => eliminar_del_set(&comando[2..], &mut set.clone()),
-            None => return ResultadoRedis::Int(0),
-            _ => return ResultadoRedis::Error(
+    match bdd.lock() {
+        Ok(bdd) => match bdd.obtener_valor(&clave) {
+            Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len() as isize),
+            None => ResultadoRedis::Int(0),
+            _ => ResultadoRedis::Error(
                 "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
                     .to_string(),
             ),
-        };
-
-    bdd.lock()
-        .unwrap()
-        .guardar_valor(comando[1].clone(), TipoRedis::Set(a_agregar));
-    ResultadoRedis::Int(cantidad_eliminada)
+        },
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
 }
 
-fn eliminar_del_set(valores: &[String], set: &mut HashSet<String>) -> (HashSet<String>, usize) {
+fn sismember(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(clave) => clave,
+        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+    };
+
+    match bdd.lock() {
+        Ok(bdd) => match bdd.obtener_valor(&clave) {
+            Some(TipoRedis::Set(set)) => {
+                let parametro = match comando.get_parametro() {
+                    Some(parametro) => parametro,
+                    None => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
+                };
+                ResultadoRedis::Int(if set.contains(&parametro) { 1 } else { 0 })
+            }
+            None => ResultadoRedis::Int(0),
+            _ => ResultadoRedis::Error(
+                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                    .to_string(),
+            ),
+        },
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
+}
+
+fn smembers(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(clave) => clave,
+        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+    };
+
+    match bdd.lock() {
+        Ok(bdd) => match bdd.obtener_valor(&clave) {
+            Some(TipoRedis::Set(set)) => {
+                let mut vector = vec![];
+                for valor in set.iter() {
+                    vector.push(ResultadoRedis::BulkStr(valor.clone()));
+                }
+                ResultadoRedis::Vector(vector)
+            }
+            None => ResultadoRedis::Vector(vec![]),
+            _ => ResultadoRedis::Error(
+                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                    .to_string(),
+            ),
+        },
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
+}
+
+fn srem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
+    let clave = match comando.get_clave() {
+        Some(clave) => clave,
+        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+    };
+
+    match bdd.lock() {
+        Ok(mut bdd) => {
+            let (a_agregar, cantidad_eliminada) =match bdd.obtener_valor(&clave) {
+                Some(TipoRedis::Set(set)) => eliminar_del_set(comando, &mut set.clone()),
+                None => return ResultadoRedis::Int(0),
+                _ => return ResultadoRedis::Error(
+                    "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                    .to_string(),
+                    ),
+            };
+            bdd.guardar_valor(clave, TipoRedis::Set(a_agregar));
+            ResultadoRedis::Int(cantidad_eliminada as isize)
+        }
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
+}
+
+fn eliminar_del_set(
+    comando: &mut ComandoInfo,
+    set: &mut HashSet<String>,
+) -> (HashSet<String>, usize) {
     let mut cantidad_eliminada = 0;
-    for valor in valores.iter() {
-        if set.contains(valor) {
-            set.remove(valor);
+
+    while let Some(parametro) = comando.get_parametro() {
+        if set.contains(&parametro) {
+            set.remove(&parametro);
             cantidad_eliminada += 1;
         }
     }
@@ -146,8 +195,8 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = sadd(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = sadd(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(1), resultado,);
 
@@ -172,9 +221,9 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        sadd(&vector, Arc::clone(&h));
-        let resultado = sadd(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        sadd(&mut comando, Arc::clone(&h));
+        let resultado = sadd(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(0), resultado,);
     }
@@ -193,8 +242,8 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = sadd(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = sadd(&mut comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(
@@ -212,8 +261,8 @@ mod tests {
         let vector = vec!["SCARD".to_string(), "miClave".to_string()];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = scard(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = scard(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(0), resultado,);
     }
@@ -229,8 +278,8 @@ mod tests {
         let vector = vec!["SCARD".to_string(), "miClave".to_string()];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = scard(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = scard(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(2), resultado);
     }
@@ -245,8 +294,8 @@ mod tests {
         let vector = vec!["SCARD".to_string(), "miClave".to_string()];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = scard(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = scard(&mut comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(
@@ -268,8 +317,8 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = sismember(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = sismember(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(0), resultado,);
     }
@@ -290,8 +339,8 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = sismember(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = sismember(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(1), resultado);
     }
@@ -310,8 +359,8 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = sismember(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = sismember(&mut comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(
@@ -328,8 +377,8 @@ mod tests {
         let vector = vec!["SMEMBERS".to_string(), "miClave".to_string()];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = smembers(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = smembers(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Vector(vec![]), resultado);
     }
@@ -344,8 +393,8 @@ mod tests {
         let vector = vec!["SMEMBERS".to_string(), "miClave".to_string()];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = smembers(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = smembers(&mut comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(
@@ -367,8 +416,8 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = srem(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = srem(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(0), resultado,);
     }
@@ -390,8 +439,8 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = srem(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = srem(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(1), resultado,);
 
@@ -424,8 +473,8 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = srem(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = srem(&mut comando, Arc::clone(&h));
 
         assert_eq!(ResultadoRedis::Int(1), resultado,);
 
@@ -454,8 +503,8 @@ mod tests {
         ];
 
         let h = Arc::new(Mutex::new(bdd));
-
-        let resultado = srem(&vector, Arc::clone(&h));
+        let mut comando = ComandoInfo::new(vector);
+        let resultado = srem(&mut comando, Arc::clone(&h));
 
         assert_eq!(
             ResultadoRedis::Error(
