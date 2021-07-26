@@ -37,7 +37,9 @@ impl Redis {
         });
 
         Redis {
-            bdd: Arc::new(Mutex::new(BaseDeDatos::new(config.dbfilename()))),
+            bdd: Arc::new(Mutex::new(BaseDeDatos::new_con_persistencia(
+                config.dbfilename(),
+            ))),
             config: Arc::new(Mutex::new(config)),
             tx,
             hilo_log: Some(hilo_log),
@@ -47,7 +49,6 @@ impl Redis {
     }
 
     pub fn iniciar(&mut self) -> Result<(), RedisError> {
-
         let direccion = match self.config.lock() {
             Ok(c) => c.direccion(),
             Err(_) => return Err(RedisError::ServerError),
