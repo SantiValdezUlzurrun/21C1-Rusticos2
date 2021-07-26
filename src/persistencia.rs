@@ -10,13 +10,11 @@ use std::time::{Duration, Instant};
 use crate::base_de_datos::TipoRedis;
 use crate::valor::Valor;
 
-const SEPARADOR: &str = "\\r\\n";
-const FORMATO_GET: &str = "*3\\r\\n$3\\r\\nSET\\r\\n";
-const FORMATO_LPUSH: &str = "$4\\r\\nLPUSH\\r\\n";
-const FORMATO_SADD: &str = "$4\\r\\nSADD\\r\\n";
-const FORMATO_EX: &str = "$2\\r\\nEX\\r\\n";
-const ID_ARG: &str = "*";
-const ID_TAM_STR: &str = "$";
+const STRING: &str = "STRING";
+const LIST: &str = "LIST";
+const SET: &str = "SET";
+const EX: &str = "EX";
+const SEPARADOR: &str = ":";
 
 pub enum MensajePersistencia {
     Info(HashMap<String, Valor>),
@@ -81,53 +79,58 @@ impl Persistidor {
     }
 }
 
-fn guardar_elemento(elemento: &str) -> String {
-    let len_elemento = elemento.len();
-    ID_TAM_STR.to_string() + &len_elemento.to_string() + SEPARADOR + elemento + SEPARADOR
-}
-
-fn guardar_cant_arg(lista: &[String]) -> String {
-    let cant_arg = lista.len() + 2;
-    ID_ARG.to_string() + &cant_arg.to_string() + SEPARADOR
-}
-
-fn guardar_expiracion(time: Duration) -> String {
-    FORMATO_EX.to_string() + &(time.as_secs().to_string()) + SEPARADOR
-}
-
 fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>, time: Option<Duration>) -> String {
     match (valor, time) {
         (Some(TipoRedis::Str(valor)), Some(duration)) => {
-            FORMATO_GET.to_string()
-                + &guardar_elemento(&clave)
-                + &guardar_elemento(&valor)
-                + &guardar_expiracion(duration)
+            STRING.to_string()
+                + SEPARADOR
+                + &clave
+                + SEPARADOR
+                + valor
+                + SEPARADOR
+                + EX
+                + SEPARADOR
+                + &(duration.as_secs().to_string())
         }
 
         (Some(TipoRedis::Str(valor)), None) => {
-            FORMATO_GET.to_string() + &guardar_elemento(&clave) + &guardar_elemento(&valor)
+            STRING.to_string() + SEPARADOR + &clave + SEPARADOR + valor
         }
 
-        (Some(TipoRedis::Lista(lista)), Some(_duration)) => {
-            let mut string_comando =
-                guardar_cant_arg(&lista) + FORMATO_LPUSH + &guardar_elemento(&clave);
+        (Some(TipoRedis::Lista(lista)), Some(duration)) => {
+            let mut persistencia_lista = LIST.to_string() + SEPARADOR + &clave;
             for valor in lista.iter() {
-                string_comando += &guardar_elemento(valor);
+                persistencia_lista += &(SEPARADOR.to_string() + valor);
             }
-            string_comando
+            persistencia_lista +=
+                &(SEPARADOR.to_string() + EX + SEPARADOR + &(duration.as_secs().to_string()));
+            persistencia_lista
         }
 
         (Some(TipoRedis::Lista(lista)), None) => {
-            let mut string_comando =
-                guardar_cant_arg(&lista) + FORMATO_LPUSH + &guardar_elemento(&clave);
+            let mut persistencia_lista = LIST.to_string() + SEPARADOR + &clave;
             for valor in lista.iter() {
-                string_comando += &guardar_elemento(valor);
+                persistencia_lista += &(SEPARADOR.to_string() + valor);
             }
-            string_comando
+            persistencia_lista
         }
 
-        (Some(TipoRedis::Set(_set)), Some(_duration)) => "".to_string(),
-        (Some(TipoRedis::Set(_set)), None) => "".to_string(),
+        (Some(TipoRedis::Set(set)), Some(duration)) => {
+            let mut persistencia_set = SET.to_string() + SEPARADOR + &clave;
+            for valor in set.iter() {
+                persistencia_set += &(SEPARADOR.to_string() + valor);
+            }
+            persistencia_set +=
+                &(SEPARADOR.to_string() + EX + SEPARADOR + &(duration.as_secs().to_string()));
+            persistencia_set
+        }
+        (Some(TipoRedis::Set(set)), None) => {
+            let mut persistencia_set = SET.to_string() + SEPARADOR + &clave;
+            for valor in set.iter() {
+                persistencia_set += &(SEPARADOR.to_string() + valor);
+            }
+            persistencia_set
+        }
         _ => String::new(),
     }
 }
@@ -188,16 +191,9 @@ mod tests {
                 val.get_tiempo(),
             ));
         }
-
-        assert!(vector.contains(&String::from(
-            "*3\\r\\n$3\\r\\nSET\\r\\n$9\\r\\nUnaClave1\\r\\n$7\\r\\nUnValor\\r\\n"
-        )));
-        assert!(vector.contains(&String::from(
-            "*3\\r\\n$3\\r\\nSET\\r\\n$9\\r\\nUnaClave2\\r\\n$7\\r\\nUnValor\\r\\n"
-        )));
-        assert!(vector.contains(&String::from(
-            "*3\\r\\n$3\\r\\nSET\\r\\n$9\\r\\nUnaClave3\\r\\n$7\\r\\nUnValor\\r\\n"
-        )));
+        assert!(vector.contains(&"STRING:UnaClave1:UnValor".to_string()));
+        assert!(vector.contains(&"STRING:UnaClave2:UnValor".to_string()));
+        assert!(vector.contains(&"STRING:UnaClave3:UnValor".to_string()));
     }
 
     #[test]
@@ -221,8 +217,6 @@ mod tests {
                 lista.push("SEGUNDO_VALOR".to_string());
                 lista.push("TERCER_VALOR".to_string());
             }
-
-            TipoRedis::Str(_) => {}
             _ => {}
         }
 
@@ -236,13 +230,55 @@ mod tests {
                 val.get_tiempo(),
             ));
         }
+        assert!(vector.contains(&"STRING:UnaClave1:UnValor".to_string()));
+        assert!(vector.contains(&"STRING:UnaClave2:UnValor".to_string()));
+        assert!(
+            vector.contains(&"LIST:milista:PRIMER_VALOR:SEGUNDO_VALOR:TERCER_VALOR".to_string())
+        );
+    }
 
-        assert!(vector.contains(&String::from(
-            "*3\\r\\n$3\\r\\nSET\\r\\n$9\\r\\nUnaClave1\\r\\n$7\\r\\nUnValor\\r\\n"
-        )));
-        assert!(vector.contains(&String::from(
-            "*3\\r\\n$3\\r\\nSET\\r\\n$9\\r\\nUnaClave2\\r\\n$7\\r\\nUnValor\\r\\n"
-        )));
-        assert!(vector.contains(&String::from("*5\\r\\n$4\\r\\nLPUSH\\r\\n$7\\r\\nmilista\\r\\n$12\\r\\nPRIMER_VALOR\\r\\n$13\\r\\nSEGUNDO_VALOR\\r\\n$12\\r\\nTERCER_VALOR\\r\\n")));
+    #[test]
+    fn inserto_varios_strings_con_persistencia_en_hash_map_y_guardar_clave_valor_devuelve_el_mensaje_para_volver_a_cargarlos(
+    ) {
+        let mut map = HashMap::new();
+        map.insert(
+            "UnaClave1",
+            Valor::expirable(TipoRedis::Str("UnValor".to_string()), 3000),
+        );
+        map.insert(
+            "UnaClave2",
+            Valor::expirable(TipoRedis::Str("UnValor".to_string()), 3000),
+        );
+        map.insert(
+            "UnaClave3",
+            Valor::expirable(TipoRedis::Str("UnValor".to_string()), 3000),
+        );
+
+        let mut lista = TipoRedis::Lista(Vec::new());
+
+        match lista {
+            TipoRedis::Lista(ref mut lista) => {
+                lista.push("PRIMER_VALOR".to_string());
+                lista.push("SEGUNDO_VALOR".to_string());
+                lista.push("TERCER_VALOR".to_string());
+            }
+            _ => {}
+        }
+
+        map.insert("milista", Valor::expirable(lista, 4500));
+
+        let mut vector: Vec<String> = vec![];
+        for (key, val) in map.iter() {
+            vector.push(guardar_clave_valor(
+                key.to_string(),
+                val.get(),
+                val.get_tiempo(),
+            ));
+        }
+        assert!(vector.contains(&"STRING:UnaClave1:UnValor:EX:3000".to_string()));
+        assert!(vector.contains(&"STRING:UnaClave2:UnValor:EX:3000".to_string()));
+        assert!(vector.contains(&"STRING:UnaClave3:UnValor:EX:3000".to_string()));
+        assert!(vector
+            .contains(&"LIST:milista:PRIMER_VALOR:SEGUNDO_VALOR:TERCER_VALOR:EX:4500".to_string()));
     }
 }

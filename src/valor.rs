@@ -11,10 +11,6 @@ pub struct Valor {
 }
 
 impl Valor {
-    pub fn new(valor: TipoRedis) -> Self {
-        Valor::no_expirable(valor)
-    }
-
     pub fn expirable(valor: TipoRedis, vida_util: u64) -> Self {
         Valor {
             valor,
