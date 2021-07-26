@@ -36,7 +36,7 @@ impl ComandoHandler for ComandoStringHandler {
 }
 
 pub fn es_comando_string(comando: &str) -> bool {
-    let comandos = vec!["GET", "SET", "APPEND"];
+    let comandos = vec!["GET", "SET", "APPEND", "STRLEN", "INCRBY", "DECRBY"];
     comandos.iter().any(|&c| c == comando)
 }
 
@@ -230,9 +230,7 @@ fn operar_sobre_int(
 
     let param = match comando.get_parametro() {
         Some(p) => p,
-        None => {
-            return ResultadoRedis::Error("ParametroError no se encontro un parametro".to_string())
-        }
+        None => 0.to_string(),
     };
 
     let param = match param.parse::<i32>() {
