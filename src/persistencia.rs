@@ -153,7 +153,13 @@ fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>, time: Option<Du
 }
 
 fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) -> Result<()> {
-    let mut archivo = match OpenOptions::new().write(true).create(true).open(archivo) {
+    let mut archivo = match OpenOptions::new()
+        .write(true)
+        //.append(true)
+        //.create_new(true)
+        .truncate(true)
+        .open(archivo)
+    {
         Ok(a) => a,
         Err(e) => return Err(e),
     };

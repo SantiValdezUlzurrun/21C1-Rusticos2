@@ -262,7 +262,8 @@ pub fn lrange(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>)
         },
         None => return ResultadoRedis::Error("ERR numero equivocado de parametros".to_string()),
     };
-    let mut lista = match base_de_datos.lock() {
+
+    let lista = match base_de_datos.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Vector(vec![]),
@@ -270,12 +271,11 @@ pub fn lrange(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>)
         },
         Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
     };
-
     let (a, b) = match obtener_intervalo(inicio, fin, lista.len() as i32) {
         Some((a, b)) => (a, b),
         None => return ResultadoRedis::Vector(vec![]),
     };
-    let a_devolver: Vec<_> = lista.drain(a..(b + 1)).collect();
+    let a_devolver: Vec<_> = lista[a..(b + 1)].to_vec();
 
     ResultadoRedis::Vector(
         a_devolver
@@ -286,19 +286,16 @@ pub fn lrange(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>)
 }
 
 fn obtener_intervalo(inicio: i32, fin: i32, limite: i32) -> Option<(usize, usize)> {
-    if inicio < fin {
-        let a = match obtener_indice_inferior(inicio, limite) {
-            Some(a) => a,
-            None => return None,
-        };
-        let b = match obtener_indice_superior(fin, limite) {
-            Some(b) => b,
-            None => return None,
-        };
+    let a = match obtener_indice_inferior(inicio, limite) {
+        Some(a) => a,
+        None => return None,
+    };
+    let b = match obtener_indice_superior(fin, limite) {
+        Some(b) => b,
+        None => return None,
+    };
 
-        return Some((a as usize, b as usize));
-    }
-    None
+    Some((a as usize, b as usize))
 }
 
 fn obtener_indice_inferior(inicio: i32, limite: i32) -> Option<i32> {
@@ -430,9 +427,9 @@ pub fn lset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
     let tamanio = lista.len() as i32;
 
     if 0 <= indice && indice < tamanio {
-        lista[indice as usize] = parametro;
+        lista.insert(indice as usize, parametro);
     } else if 0 > indice && tamanio + indice >= 0 {
-        lista[(tamanio + indice) as usize] = parametro;
+        lista.insert((tamanio + indice) as usize as usize, parametro);
     } else {
         return ResultadoRedis::Error("ERR index out of range".to_string());
     }
@@ -887,6 +884,32 @@ mod tests {
     }
 
     #[test]
+    fn lrange_maximo_rango() {
+        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        data_base.guardar_valor(
+            "clave".to_string(),
+            TipoRedis::Lista(vec!["0".to_string(), "1".to_string(), "2".to_string()]),
+        );
+        let ptr = Arc::new(Mutex::new(data_base));
+
+        let mut comando = ComandoInfo::new(vec![
+            "lrange".to_string(),
+            "clave".to_string(),
+            "0".to_string(),
+            "-1".to_string(),
+        ]);
+
+        assert_eq!(
+            ResultadoRedis::Vector(vec![
+                ResultadoRedis::BulkStr("0".to_string()),
+                ResultadoRedis::BulkStr("1".to_string()),
+                ResultadoRedis::BulkStr("2".to_string())
+            ]),
+            lrange(&mut comando, ptr)
+        );
+    }
+
+    #[test]
     fn lrange_rangos_enteros_devuelven_los_elementos_correctamente_hasta_el_indice_final_inclusive()
     {
         let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
@@ -1072,7 +1095,10 @@ mod tests {
 
         let lista = ptr.lock().unwrap().obtener_valor("clave").unwrap().clone();
 
-        assert_eq!(TipoRedis::Lista(vec!["b".to_string()]), lista);
+        assert_eq!(
+            TipoRedis::Lista(vec!["b".to_string(), "a".to_string()]),
+            lista
+        );
     }
 
     #[test]

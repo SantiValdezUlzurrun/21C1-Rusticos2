@@ -200,9 +200,7 @@ impl BaseDeDatos {
     }
 
     pub fn info(&self) -> Vec<String> {
-        let mut info = Vec::new();
-        info.push("# Database".to_string());
-        info.push("".to_string());
+        let mut info = vec!["# Database".to_string(), "".to_string()];
 
         info.push(format!("cantidad de claves:{}", self.hashmap.len()));
         info.push(format!("capacidad:{}", self.hashmap.capacity()));
@@ -259,6 +257,9 @@ impl BaseDeDatos {
         let reader = BufReader::new(archivo);
         let mut lineas = reader.lines();
         while let Some(Ok(line)) = lineas.next() {
+            if line.is_empty() {
+                continue;
+            }
             let mut elemento: Vec<&str> = line.split(':').collect();
 
             if elemento.contains(&"STRING") {

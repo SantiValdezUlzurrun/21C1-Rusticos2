@@ -121,7 +121,6 @@ fn manejar_cliente(
                 Ok(orden) => orden,
                 Err(_) => return Err(RedisError::ServerError),
             };
-
             logger.log_comando(cliente.obtener_addr(), comando.clone());
 
             let resultado = manejar_comando(

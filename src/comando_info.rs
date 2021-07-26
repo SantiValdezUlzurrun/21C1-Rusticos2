@@ -19,7 +19,6 @@ impl ComandoInfo {
 
         let nombre = comando_parseado[0].clone();
         comando_parseado.remove(0);
-
         ComandoInfo {
             nombre,
             parametros: comando_parseado,

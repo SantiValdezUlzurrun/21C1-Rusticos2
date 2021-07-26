@@ -50,6 +50,7 @@ impl<R: Read> Parser<R> {
                 }
             }
         }
+        println!("{:?}", comando);
         Ok(ComandoInfo::new(comando))
     }
 }
@@ -72,10 +73,12 @@ pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
 }
 
 pub fn parsear_int(cadena: String) -> Option<u32> {
-    cadena
-        .chars()
-        .find(|a| a.is_digit(10))
-        .and_then(|a| a.to_digit(10))
+    let mut chars = cadena.chars();
+    chars.next();
+    match chars.as_str().parse::<u32>() {
+        Ok(int) => Some(int),
+        Err(_) => None,
+    }
 }
 
 #[cfg(test)]
@@ -170,6 +173,19 @@ mod tests {
         assert_eq!(
             parsear_respuesta(&resultado),
             "*5\r\n:1\r\n:2\r\n:3\r\n:4\r\n$6\r\nfoobar\r\n"
+        );
+    }
+
+    #[test]
+    fn a() {
+        let stream = "*3\r\n$3\r\nSET\r\n$7\r\ncatedra\r\n$18\r\nTallerProgramacion\r\n".as_bytes();
+        let parser = Parser::new(stream);
+        let mut resultado = parser.parsear_stream().unwrap();
+        assert_eq!(resultado.get_nombre(), "SET".to_string());
+        assert_eq!(resultado.get_clave(), Some("catedra".to_string()));
+        assert_eq!(
+            resultado.get_parametro(),
+            Some("TallerProgramacion".to_string())
         );
     }
 }

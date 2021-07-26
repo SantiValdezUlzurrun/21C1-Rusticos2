@@ -1,16 +1,18 @@
+mod key_test;
+mod list_test;
+mod set_test;
 mod string_test;
 
+use crate::key_test::key_tests;
+use crate::list_test::list_tests;
+use crate::set_test::set_tests;
 use crate::string_test::string_tests;
-use std::thread::JoinHandle;
 
 pub const REDIS_SERVER_IP: &str = "redis://127.0.0.1:8080/";
 
 fn main() {
-    let mut handles: Vec<JoinHandle<()>> = vec![];
-
-    string_tests(&mut handles);
-
-    for handle in handles {
-        handle.join().unwrap();
-    }
+    string_tests();
+    list_tests();
+    key_tests();
+    set_tests();
 }
