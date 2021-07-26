@@ -257,6 +257,9 @@ impl BaseDeDatos {
         let reader = BufReader::new(archivo);
         let mut lineas = reader.lines();
         while let Some(Ok(line)) = lineas.next() {
+            if line.is_empty() {
+                continue;
+            }
             let mut elemento: Vec<&str> = line.split(':').collect();
 
             if elemento.contains(&"STRING") {

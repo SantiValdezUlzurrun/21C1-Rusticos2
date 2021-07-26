@@ -39,7 +39,10 @@ impl ComandoHandler for ComandoKeyHandler {
 }
 
 pub fn es_comando_key(comando: &str) -> bool {
-    let comandos = vec!["COPY", "DEL", "EXISTS", "RENAME", "TYPE"];
+    let comandos = vec![
+        "COPY", "DEL", "EXISTS", "RENAME", "EXPIRE", "EXPIREAT", "PERSIST", "TTL", "TOUCH", "KEYS",
+        "SORT", "TYPE",
+    ];
     comandos.iter().any(|&c| c == comando)
 }
 
@@ -296,7 +299,7 @@ fn sort_elemento_con_pesos_interno(
     parametros: Vec<String>,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-    if !parametros.contains(&"alpha".to_string()) {
+    if !parametros.contains(&"ALPHA".to_string()) {
         match tiene_solo_valores_numericos(valores.clone()) {
             true => {}
             false => {
@@ -344,19 +347,19 @@ fn sort_configuracion_lista_ordenada(
     mut valores: Vec<String>,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-    if parametros.contains(&"desc".to_string()) {
+    if parametros.contains(&"DESC".to_string()) {
         valores.reverse();
     }
 
-    if parametros.contains(&"limit".to_string()) {
+    if parametros.contains(&"LIMIT".to_string()) {
         valores = match selecionar_rango(parametros.clone(), valores) {
             Some(r) => r,
             None => return ResultadoRedis::Error("ERR in sort limit offset count".to_string()),
         };
     }
 
-    if parametros.contains(&"store".to_string()) {
-        let clave = match parametros.rsplit(|p| p == &"store".to_string()).next() {
+    if parametros.contains(&"STORE".to_string()) {
+        let clave = match parametros.rsplit(|p| p == &"STORE".to_string()).next() {
             Some(c) => &c[0],
             None => return ResultadoRedis::Error("ERR en sort store clave".to_string()),
         };
@@ -384,7 +387,7 @@ fn sort_elemento_con_pesos_externos(
     parametros: Vec<String>,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-    let patron_pesos = match parametros.rsplit(|p| p == &"by".to_string()).next() {
+    let patron_pesos = match parametros.rsplit(|p| p == &"BY".to_string()).next() {
         Some(c) => &c[0],
         None => return ResultadoRedis::Error("ERR en sort patron pesos externos".to_string()),
     };
@@ -410,8 +413,8 @@ fn sort_elemento_con_pesos_externos(
 
     tuplas.sort_by(|a, b| a.1.cmp(&b.1));
 
-    if parametros.contains(&"get".to_string()) {
-        let patron_obj = match parametros.rsplit(|p| p == &"get".to_string()).next() {
+    if parametros.contains(&"GET".to_string()) {
+        let patron_obj = match parametros.rsplit(|p| p == &"GET".to_string()).next() {
             Some(c) => &c[0],
             None => {
                 return ResultadoRedis::Error("ERR en sort by patron objetos externos".to_string())
@@ -481,7 +484,7 @@ fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
         return ResultadoRedis::Vector(vec![]);
     }
 
-    if parametros.contains(&"by".to_string()) {
+    if parametros.contains(&"BY".to_string()) {
         sort_elemento_con_pesos_externos(valores, parametros, bdd)
     } else {
         sort_elemento_con_pesos_interno(valores, parametros, bdd)
@@ -800,7 +803,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "alpha".to_string(),
+            "ALPHA".to_string(),
         ]);
         let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
         assert_eq!(
@@ -854,7 +857,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "alpha".to_string(),
+            "ALPHA".to_string(),
         ]);
         let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
         assert_eq!(
@@ -885,7 +888,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "desc".to_string(),
+            "DESC".to_string(),
         ]);
         let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
         assert_eq!(
@@ -914,7 +917,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "limit".to_string(),
+            "LIMIT".to_string(),
             "0".to_string(),
             "2".to_string(),
         ]);
@@ -944,7 +947,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "limit".to_string(),
+            "LIMIT".to_string(),
             "-2".to_string(),
             "8".to_string(),
         ]);
@@ -977,7 +980,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "limit".to_string(),
+            "LIMIT".to_string(),
             "2".to_string(),
             "2".to_string(),
         ]);
@@ -1007,7 +1010,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "limit".to_string(),
+            "LIMIT".to_string(),
             "-1".to_string(),
             "-10".to_string(),
         ]);
@@ -1030,7 +1033,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "limit".to_string(),
+            "LIMIT".to_string(),
             "0".to_string(),
             "2".to_string(),
         ]);
@@ -1059,7 +1062,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "by".to_string(),
+            "BY".to_string(),
             "peso_*".to_string(),
         ]);
         let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
@@ -1095,7 +1098,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "by".to_string(),
+            "BY".to_string(),
             "peso_*".to_string(),
         ]);
         let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
@@ -1127,7 +1130,7 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "by".to_string(),
+            "BY".to_string(),
             "peso_*".to_string(),
         ]);
         let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
@@ -1180,9 +1183,9 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "by".to_string(),
+            "BY".to_string(),
             "peso_*".to_string(),
-            "get".to_string(),
+            "GET".to_string(),
             "objeto_*".to_string(),
         ]);
         let valor = sort(&mut comando, Arc::new(Mutex::new(data_base)));
@@ -1222,9 +1225,9 @@ mod tests {
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
-            "by".to_string(),
+            "BY".to_string(),
             "peso_*".to_string(),
-            "store".to_string(),
+            "STORE".to_string(),
             "ordenados".to_string(),
         ]);
         assert_eq!(
