@@ -37,7 +37,7 @@ impl ComandoHandler for ComandoStringHandler {
 
 pub fn es_comando_string(comando: &str) -> bool {
     let comandos = vec![
-        "GET", "SET", "APPEND", "STRLEN", "INCRBY", "DECRBY", "MGET", "MSET", "GETSET", "GETDEL"
+        "GET", "SET", "APPEND", "STRLEN", "INCRBY", "DECRBY", "MGET", "MSET", "GETSET", "GETDEL",
     ];
     comandos.iter().any(|&c| c == comando)
 }

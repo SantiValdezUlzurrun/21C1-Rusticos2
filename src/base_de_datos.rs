@@ -200,9 +200,7 @@ impl BaseDeDatos {
     }
 
     pub fn info(&self) -> Vec<String> {
-        let mut info = Vec::new();
-        info.push("# Database".to_string());
-        info.push("".to_string());
+        let mut info = vec!["# Database".to_string(), "".to_string()];
 
         info.push(format!("cantidad de claves:{}", self.hashmap.len()));
         info.push(format!("capacidad:{}", self.hashmap.capacity()));

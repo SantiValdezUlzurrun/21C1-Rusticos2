@@ -32,7 +32,7 @@ impl ComandoHandler for ComandoSetHandler {
 }
 
 pub fn es_comando_set(comando: &str) -> bool {
-    let comandos = vec!["SADD", "SCARD"];
+    let comandos = vec!["SADD", "SCARD", "SISMEMBER", "SMEMBERS", "SREM"];
     comandos.iter().any(|&c| c == comando)
 }
 

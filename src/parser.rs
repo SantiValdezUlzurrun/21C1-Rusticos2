@@ -20,7 +20,6 @@ impl<R: Read> Parser<R> {
     }
 
     pub fn parsear_stream(self) -> Result<ComandoInfo, ParserError> {
-
         let mut lineas = self.lector.lines();
 
         let primer_valor = match lineas.next() {
@@ -51,7 +50,7 @@ impl<R: Read> Parser<R> {
                 }
             }
         }
-        println!("{:?}",comando);
+        println!("{:?}", comando);
         Ok(ComandoInfo::new(comando))
     }
 }
@@ -184,6 +183,9 @@ mod tests {
         let mut resultado = parser.parsear_stream().unwrap();
         assert_eq!(resultado.get_nombre(), "SET".to_string());
         assert_eq!(resultado.get_clave(), Some("catedra".to_string()));
-        assert_eq!(resultado.get_parametro(), Some("TallerProgramacion".to_string()));
+        assert_eq!(
+            resultado.get_parametro(),
+            Some("TallerProgramacion".to_string())
+        );
     }
 }
