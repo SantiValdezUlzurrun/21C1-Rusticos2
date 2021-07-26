@@ -49,7 +49,10 @@ fn flushdb(
     bdd: Arc<Mutex<BaseDeDatos>>,
     _config: Arc<Mutex<Config>>,
 ) -> ResultadoRedis {
-    bdd.lock().unwrap().borrar_claves();
+    match bdd.lock() {
+        Ok(mut b) => b.borrar_claves(),
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    };
     ResultadoRedis::StrSimple("OK".to_string())
 }
 
@@ -58,7 +61,11 @@ fn dbsize(
     bdd: Arc<Mutex<BaseDeDatos>>,
     _config: Arc<Mutex<Config>>,
 ) -> ResultadoRedis {
-    ResultadoRedis::Int(bdd.lock().unwrap().cantidad_claves() as isize)
+    let cantidad = match bdd.lock() {
+        Ok(b) => b.cantidad_claves(),
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    };
+    ResultadoRedis::Int(cantidad as isize)
 }
 
 fn fconfig(
@@ -88,7 +95,10 @@ fn config_get(
         None => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
     };
 
-    let valores = config.lock().unwrap().get(&parametro);
+    let valores = match config.lock() {
+        Ok(c) => c.get(&parametro),
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la configuracion".to_string()),
+    };
 
     ResultadoRedis::Vector(
         valores
@@ -108,7 +118,10 @@ fn config_set(
         _ => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
     };
 
-    config.lock().unwrap().set(parametro, valor);
+    match config.lock() {
+        Ok(mut c) => c.set(parametro, valor),
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la configuracion".to_string()),
+    };
 
     ResultadoRedis::StrSimple("Ok".to_string())
 }
@@ -118,8 +131,14 @@ fn info(
     bdd: Arc<Mutex<BaseDeDatos>>,
     config: Arc<Mutex<Config>>,
 ) -> ResultadoRedis {
-    let mut info = config.lock().unwrap().info();
-    info.append(&mut bdd.lock().unwrap().info());
+    let info = match (config.lock(), bdd.lock()) {
+        (Ok(c), Ok(b)) => {
+            let mut v = c.info();
+            v.append(&mut b.info());
+            v
+        }
+        _ => return ResultadoRedis::Error("Error al acceder a la informacion".to_string()),
+    };
 
     ResultadoRedis::Vector(
         info.iter()
@@ -133,6 +152,9 @@ fn monitor(
     _bdd: Arc<Mutex<BaseDeDatos>>,
     config: Arc<Mutex<Config>>,
 ) -> ResultadoRedis {
-    config.lock().unwrap().monitor();
+    match config.lock() {
+        Ok(mut c) => c.monitor(),
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la configuracion".to_string()),
+    };
     ResultadoRedis::StrSimple("Ok".to_string())
 }

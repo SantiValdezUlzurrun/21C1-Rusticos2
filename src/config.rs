@@ -134,7 +134,9 @@ impl Config {
     }
 
     pub fn actualizar_bdd(&self, tabla: Arc<Mutex<BaseDeDatos>>) {
-        tabla.lock().unwrap().cambiar_archivo(self.dbfilename());
+        if let Ok(b) = tabla.lock() {
+            b.cambiar_archivo(self.dbfilename())
+        }
     }
 }
 

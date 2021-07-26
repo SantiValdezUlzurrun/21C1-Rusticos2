@@ -1,3 +1,9 @@
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
+
+use std::iter::FromIterator;
+
 use crate::canal::Canal;
 use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::valor::Valor;
@@ -34,22 +40,6 @@ pub struct BaseDeDatos {
 }
 
 impl BaseDeDatos {
-    pub fn new(archivo_persistencia: String) -> Self {
-        let (tx, rx) = channel();
-        let mut handler = PersistidorHandler::new(archivo_persistencia, 1, rx);
-
-        let hilo_persistencia = thread::spawn(move || {
-            handler.persistir();
-        });
-
-        BaseDeDatos {
-            hashmap: HashMap::new(),
-            persistidor: Persistidor::new(tx.clone()),
-            hilo: Option::Some(hilo_persistencia),
-            tx,
-        }
-    }
-
     pub fn obtener_valor(&self, clave: &str) -> Option<&TipoRedis> {
         match self.hashmap.get(clave) {
             Some(v) => v.get(),
@@ -228,11 +218,81 @@ impl BaseDeDatos {
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }
+
+    pub fn new(archivo_persistencia: String) -> Self {
+        let (tx, rx) = channel();
+        let mut handler = PersistidorHandler::new(archivo_persistencia.clone(), 1, rx);
+
+        let hilo_persistencia = thread::spawn(move || {
+            handler.persistir();
+        });
+
+        let mut hashmap = HashMap::<String, Valor>::new();
+
+        let archivo = match File::open(archivo_persistencia) {
+            Ok(archivo) => archivo,
+            Err(_) => {
+                return BaseDeDatos {
+                    hashmap: HashMap::new(),
+                    persistidor: Persistidor::new(tx.clone()),
+                    hilo: Option::Some(hilo_persistencia),
+                    tx,
+                }
+            }
+        };
+
+        let reader = BufReader::new(archivo);
+        let mut lineas = reader.lines();
+        while let Some(Ok(line)) = lineas.next() {
+            let v: Vec<&str> = line.split("\\r\\n").collect();
+            let mut param = v
+                .iter()
+                .filter(|x| {
+                    !x.to_string().contains('$')
+                        && !x.to_string().contains('*')
+                        && !x.to_string().contains('\n')
+                })
+                .collect::<Vec<_>>();
+
+            param.pop();
+
+            if param[0] == &"SET" {
+                hashmap.insert(
+                    param[1].to_string(),
+                    Valor::new(TipoRedis::Str(param[2].to_string())),
+                );
+            } else if param[0] == &"LPUSH" {
+                param.remove(0);
+                let clave = param.remove(0).to_string();
+                hashmap.insert(
+                    clave,
+                    Valor::new(TipoRedis::Lista(
+                        param.iter().map(|x| x.to_string()).collect(),
+                    )),
+                );
+            } else {
+                param.remove(0);
+                let clave = param.remove(0).to_string();
+                hashmap.insert(
+                    clave,
+                    Valor::new(TipoRedis::Set(HashSet::from_iter(
+                        param.iter().map(|x| x.to_string()).collect::<Vec<String>>(),
+                    ))),
+                );
+            }
+        }
+        BaseDeDatos {
+            hashmap,
+            persistidor: Persistidor::new(tx.clone()),
+            hilo: Option::Some(hilo_persistencia),
+            tx,
+        }
+    }
 }
 
 impl Drop for BaseDeDatos {
     fn drop(&mut self) {
-        self.tx.send(MensajePersistencia::Cerrar).unwrap();
+        if self.tx.send(MensajePersistencia::Cerrar).is_ok() {};
 
         if let Some(hilo) = self.hilo.take() {
             if hilo.join().is_ok() {}

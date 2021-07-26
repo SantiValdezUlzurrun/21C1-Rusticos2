@@ -5,6 +5,7 @@ use std::thread::JoinHandle;
 
 pub fn string_tests(handles: &mut Vec<JoinHandle<()>>) {
     test_set_y_get(handles);
+    test_append(handles);
 }
 
 fn test_set_y_get(handles: &mut Vec<JoinHandle<()>>) {
@@ -29,3 +30,5 @@ fn test_set_y_get(handles: &mut Vec<JoinHandle<()>>) {
     });
     handles.push(handle);
 }
+
+fn test_append(_handles: &mut Vec<JoinHandle<()>>) {}
