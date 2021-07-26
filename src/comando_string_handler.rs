@@ -3,10 +3,6 @@ use crate::comando::{Comando, ComandoHandler};
 use crate::comando_info::ComandoInfo;
 use std::sync::{Arc, Mutex};
 
-/*
-Comando Lista faltantes:
-+ getset
-*/
 pub struct ComandoStringHandler {
     comando: ComandoInfo,
     a_ejecutar: Comando,
@@ -50,9 +46,22 @@ fn get(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     };
 
-    match bdd.lock().unwrap().obtener_valor(&clave) {
-        Some(TipoRedis::Str(valor)) => ResultadoRedis::BulkStr(valor.to_string()),
-        _ => ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
+    match bdd.lock() {
+        Ok(bdd) => match bdd.obtener_valor(&clave) {
+            Some(TipoRedis::Str(valor)) => ResultadoRedis::BulkStr(valor.to_string()),
+            _ => ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
+        },
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
+}
+
+fn obtener_tiempo_expiracion(parametros: Vec<String>, support: &str) -> Option<u64> {
+    match parametros.rsplit(|p| p == &support.to_string()).next() {
+        Some(c) => match c[0].clone().parse::<u64>() {
+            Ok(num) => Some(num),
+            Err(_) => None,
+        },
+        None => None,
     }
 }
 
@@ -61,16 +70,56 @@ fn set(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
         Some(c) => c,
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     };
+
+    let parametros = match comando.get_parametros() {
+        Some(p) => p,
+        None => {
+            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+        }
+    };
+    match bdd.lock() {
+        Ok(mut bdd) => {
+            if parametros.contains(&"EX".to_string()) {
+                let expiracion = match obtener_tiempo_expiracion(parametros.clone(), "EX") {
+                    Some(e) => e,
+                    None => {
+                        return ResultadoRedis::Error("ERR SET tiempo de expiracion".to_string())
+                    }
+                };
+                bdd.guardar_valor_con_expiracion(
+                    clave,
+                    expiracion,
+                    TipoRedis::Str(parametros[1].clone()),
+                )
+            } else if parametros.contains(&"PX".to_string()) {
+                let expiracion = match obtener_tiempo_expiracion(parametros.clone(), "PX") {
+                    Some(e) => e,
+                    None => {
+                        return ResultadoRedis::Error("ERR SET tiempo de expiracion".to_string())
+                    }
+                };
+                bdd.guardar_valor_con_expiracion(
+                    clave,
+                    expiracion / 1000,
+                    TipoRedis::Str(parametros[1].clone()),
+                )
+            } else {
+                bdd.guardar_valor(clave, TipoRedis::Str(parametros[1].clone()))
+            }
+        }
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
+    /*
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
             return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
         }
     };
-
-    bdd.lock()
-        .unwrap()
-        .guardar_valor(clave, TipoRedis::Str(parametro));
+    match bdd.lock() {
+        Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Str(parametro[1])),
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }*/
     ResultadoRedis::StrSimple("OK".to_string())
 }
 
@@ -86,16 +135,13 @@ fn getset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         }
     };
 
-    match bdd
-        .lock()
-        .unwrap()
-        .intercambiar_valor(clave, TipoRedis::Str(parametro))
-    {
-        Some(TipoRedis::Lista(_)) => ResultadoRedis::Error("WRONGTYPE".to_string()),
-        Some(TipoRedis::Set(_)) => ResultadoRedis::Error("WRONGTYPE".to_string()),
-        Some(TipoRedis::Canal(_)) => ResultadoRedis::Error("WRONGTYPE".to_string()),
-        Some(TipoRedis::Str(valor_enterior)) => ResultadoRedis::StrSimple(valor_enterior),
-        None => ResultadoRedis::Nil,
+    match bdd.lock() {
+        Ok(mut bdd) => match bdd.intercambiar_valor(clave, TipoRedis::Str(parametro)) {
+            Some(TipoRedis::Str(valor_enterior)) => ResultadoRedis::StrSimple(valor_enterior),
+            None => ResultadoRedis::Nil,
+            _ => ResultadoRedis::Error("WRONGTYPE".to_string()),
+        },
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
     }
 }
 
@@ -104,27 +150,29 @@ fn append(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         Some(c) => c,
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     };
-    let parametro = match comando.get_parametro() {
+    let mut valor = match comando.get_parametro() {
         Some(p) => p,
         None => {
             return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
         }
     };
-    if bdd.lock().unwrap().existe_clave(&clave) {
-        let valor = match get(comando, bdd.clone()) {
-            ResultadoRedis::BulkStr(valor) => valor + &parametro,
-            _ => return ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
-        };
-
-        bdd.lock()
-            .unwrap()
-            .guardar_valor(clave, TipoRedis::Str(valor.clone()));
-        return ResultadoRedis::Int(valor.len() as isize);
-    };
-    bdd.lock()
-        .unwrap()
-        .guardar_valor(clave, TipoRedis::Str(parametro.to_string()));
-    ResultadoRedis::Int(parametro.len() as isize)
+    match bdd.lock() {
+        Ok(mut bdd) => {
+            if bdd.existe_clave(&clave) {
+                valor = match bdd.obtener_valor(&clave) {
+                    Some(TipoRedis::Str(v)) => v.to_string() + &valor,
+                    _ => {
+                        return ResultadoRedis::Error(
+                            "WRONGTYPE la clave no corresponde a un string".to_string(),
+                        )
+                    }
+                };
+            };
+            bdd.guardar_valor(clave, TipoRedis::Str(valor.to_string()));
+            ResultadoRedis::Int(valor.len() as isize)
+        }
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
 }
 
 fn getdel(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
@@ -134,7 +182,11 @@ fn getdel(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
     };
     let bdd_clon = Arc::clone(&bdd);
     let resultado = get(comando, bdd_clon);
-    bdd.lock().unwrap().eliminar_clave(&clave);
+
+    match bdd.lock() {
+        Ok(mut bdd) => bdd.eliminar_clave(&clave),
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    };
     resultado
 }
 
@@ -143,9 +195,12 @@ fn strlen(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         Some(c) => c,
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     };
-    match bdd.lock().unwrap().obtener_valor(&clave) {
-        Some(TipoRedis::Str(valor)) => ResultadoRedis::Int(valor.len() as isize),
-        _ => ResultadoRedis::Error("StrLen error al obtener la clave".to_string()),
+    match bdd.lock() {
+        Ok(bdd) => match bdd.obtener_valor(&clave) {
+            Some(TipoRedis::Str(valor)) => ResultadoRedis::Int(valor.len() as isize),
+            _ => ResultadoRedis::Error("StrLen error al obtener la clave".to_string()),
+        },
+        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
     }
 }
 
@@ -159,10 +214,13 @@ fn operar_sobre_int(
         None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
     };
 
-    let valor = match bdd.lock().unwrap().obtener_valor(&clave) {
-        Some(TipoRedis::Str(valor)) => valor.clone(),
-        None => "0".to_string(),
-        _ => return ResultadoRedis::Error("WRONGTYPE".to_string()),
+    let valor = match bdd.lock() {
+        Ok(bdd) => match bdd.obtener_valor(&clave) {
+            Some(TipoRedis::Str(valor)) => valor.clone(),
+            None => "0".to_string(),
+            _ => return ResultadoRedis::Error("WRONGTYPE".to_string()),
+        },
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
     };
 
     let mut num = match valor.parse::<i32>() {
@@ -183,10 +241,10 @@ fn operar_sobre_int(
     };
 
     num = f(num, param);
-    bdd.lock()
-        .unwrap()
-        .guardar_valor(clave, TipoRedis::Str(num.to_string()));
-
+    match bdd.lock() {
+        Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Str(num.to_string())),
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
     ResultadoRedis::BulkStr(num.to_string())
 }
 
@@ -205,12 +263,15 @@ fn mget(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
     while quedan_valores {
         let param = comando.get_parametro();
         match param {
-            Some(p) => match bdd.lock().unwrap().obtener_valor(&p) {
-                Some(TipoRedis::Str(valor)) => {
-                    valores.push(ResultadoRedis::BulkStr(valor.to_string()));
-                }
-                _ => {
-                    valores.push(ResultadoRedis::Nil);
+            Some(p) => match bdd.lock() {
+                Ok(bdd) => match bdd.obtener_valor(&p) {
+                    Some(TipoRedis::Str(valor)) => {
+                        valores.push(ResultadoRedis::BulkStr(valor.to_string()))
+                    }
+                    _ => valores.push(ResultadoRedis::Nil),
+                },
+                Err(_) => {
+                    return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
                 }
             },
             None => {
@@ -235,7 +296,10 @@ fn mset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
         return ResultadoRedis::Error("wrong number of arguments for MSET".to_string());
     }
 
-    bdd.lock().unwrap().guardar_valores(parametros);
+    match bdd.lock() {
+        Ok(mut bdd) => bdd.guardar_valores(parametros),
+        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+    }
     ResultadoRedis::StrSimple("OK".to_string())
 }
 
@@ -333,7 +397,7 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("GetError error al obtener la clave".to_string()),
+            ResultadoRedis::Error("WRONGTYPE la clave no corresponde a un string".to_string()),
             append(&mut comando, Arc::new(Mutex::new(bdd)))
         );
     }

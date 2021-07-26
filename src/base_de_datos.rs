@@ -1,3 +1,9 @@
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
+
+use std::iter::FromIterator;
+
 use crate::canal::Canal;
 use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::valor::Valor;
@@ -34,22 +40,6 @@ pub struct BaseDeDatos {
 }
 
 impl BaseDeDatos {
-    pub fn new(archivo_persistencia: String) -> Self {
-        let (tx, rx) = channel();
-        let mut handler = PersistidorHandler::new(archivo_persistencia, 1, rx);
-
-        let hilo_persistencia = thread::spawn(move || {
-            handler.persistir();
-        });
-
-        BaseDeDatos {
-            hashmap: HashMap::new(),
-            persistidor: Persistidor::new(tx.clone()),
-            hilo: Option::Some(hilo_persistencia),
-            tx,
-        }
-    }
-
     pub fn obtener_valor(&self, clave: &str) -> Option<&TipoRedis> {
         match self.hashmap.get(clave) {
             Some(v) => v.get(),
@@ -64,7 +54,6 @@ impl BaseDeDatos {
         }
     }
 
-    #[allow(dead_code)]
     pub fn guardar_valor_con_expiracion(
         &mut self,
         clave: String,
@@ -228,11 +217,122 @@ impl BaseDeDatos {
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }
+    pub fn new(archivo_persistencia: String) -> Self {
+        let (tx, rx) = channel();
+        let mut handler = PersistidorHandler::new(archivo_persistencia, 1, rx);
+
+        let hilo_persistencia = thread::spawn(move || {
+            handler.persistir();
+        });
+
+        BaseDeDatos {
+            hashmap: HashMap::<String, Valor>::new(),
+            persistidor: Persistidor::new(tx.clone()),
+            hilo: Option::Some(hilo_persistencia),
+            tx,
+        }
+    }
+    #[allow(dead_code)]
+    pub fn new_con_persistencia(archivo_persistencia: String) -> Self {
+        let (tx, rx) = channel();
+        let mut handler = PersistidorHandler::new(archivo_persistencia.clone(), 1, rx);
+
+        let hilo_persistencia = thread::spawn(move || {
+            handler.persistir();
+        });
+
+        let mut hashmap = HashMap::<String, Valor>::new();
+
+        let archivo = match File::open(archivo_persistencia) {
+            Ok(archivo) => archivo,
+            Err(_) => {
+                return BaseDeDatos {
+                    hashmap: HashMap::new(),
+                    persistidor: Persistidor::new(tx.clone()),
+                    hilo: Option::Some(hilo_persistencia),
+                    tx,
+                }
+            }
+        };
+
+        let reader = BufReader::new(archivo);
+        let mut lineas = reader.lines();
+        while let Some(Ok(line)) = lineas.next() {
+            let mut elemento: Vec<&str> = line.split(':').collect();
+
+            if elemento.contains(&"STRING") {
+                let mut valor = Valor::no_expirable(TipoRedis::Str(elemento[2].to_string()));
+
+                if es_expirable(elemento.clone()) {
+                    let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+                    valor = Valor::expirable(TipoRedis::Str(elemento[2].to_string()), tiempo);
+                }
+                hashmap.insert(elemento[1].to_string(), valor);
+            } else if elemento.remove(0) == "LIST" {
+                let clave = elemento.remove(0).to_string();
+                let mut valor = Valor::no_expirable(TipoRedis::Lista(
+                    elemento.iter().map(|x| x.to_string()).collect(),
+                ));
+
+                if es_expirable(elemento.clone()) {
+                    let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+
+                    valor = Valor::expirable(
+                        TipoRedis::Lista(elemento.iter().map(|x| x.to_string()).collect()),
+                        tiempo,
+                    );
+                }
+                hashmap.insert(clave, valor);
+            } else {
+                elemento.remove(0);
+                let clave = elemento.remove(0).to_string();
+                let mut valor = Valor::no_expirable(TipoRedis::Set(HashSet::from_iter(
+                    elemento
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>(),
+                )));
+                if es_expirable(elemento.clone()) {
+                    let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+
+                    valor = Valor::expirable(
+                        TipoRedis::Set(HashSet::from_iter(
+                            elemento
+                                .iter()
+                                .map(|x| x.to_string())
+                                .collect::<Vec<String>>(),
+                        )),
+                        tiempo,
+                    );
+                }
+                hashmap.insert(clave, valor);
+            }
+        }
+        BaseDeDatos {
+            hashmap,
+            persistidor: Persistidor::new(tx.clone()),
+            hilo: Option::Some(hilo_persistencia),
+            tx,
+        }
+    }
+}
+
+fn es_expirable(parametros: Vec<&str>) -> bool {
+    parametros.contains(&"EX")
+}
+fn obtener_tiempo_expiracion(parametros: Vec<&str>, support: &str) -> Option<u64> {
+    match parametros.rsplit(|p| p == &support.to_string()).next() {
+        Some(c) => match c[0].parse::<u64>() {
+            Ok(num) => Some(num),
+            Err(_) => None,
+        },
+        None => None,
+    }
 }
 
 impl Drop for BaseDeDatos {
     fn drop(&mut self) {
-        self.tx.send(MensajePersistencia::Cerrar).unwrap();
+        if self.tx.send(MensajePersistencia::Cerrar).is_ok() {};
 
         if let Some(hilo) = self.hilo.take() {
             if hilo.join().is_ok() {}
