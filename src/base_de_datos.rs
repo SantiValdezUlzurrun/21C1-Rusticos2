@@ -189,6 +189,31 @@ impl BaseDeDatos {
         canales
     }
 
+    pub fn borrar_claves(&mut self) {
+        self.hashmap = HashMap::new();
+
+        self.persistirse();
+    }
+
+    pub fn cantidad_claves(&self) -> usize {
+        self.hashmap.len()
+    }
+
+    pub fn info(&self) -> Vec<String> {
+        let mut info = Vec::new();
+        info.push("# Database".to_string());
+        info.push("".to_string());
+
+        info.push(format!("cantidad de claves:{}", self.hashmap.len()));
+        info.push(format!("capacidad:{}", self.hashmap.capacity()));
+
+        info
+    }
+
+    pub fn cambiar_archivo(&self, ruta_nueva: String) {
+        self.persistidor.cambiar_archivo(ruta_nueva);
+    }
+
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }
@@ -307,7 +332,7 @@ fn obtener_tiempo_expiracion(parametros: Vec<&str>, support: &str) -> Option<u64
 
 impl Drop for BaseDeDatos {
     fn drop(&mut self) {
-        self.tx.send(MensajePersistencia::Cerrar).unwrap();
+        if self.tx.send(MensajePersistencia::Cerrar).is_ok() {};
 
         if let Some(hilo) = self.hilo.take() {
             if hilo.join().is_ok() {}

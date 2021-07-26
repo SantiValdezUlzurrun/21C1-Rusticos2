@@ -3,6 +3,7 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::Result;
 use std::io::Write;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::{Duration, Instant};
@@ -18,6 +19,7 @@ const SEPARADOR: &str = ":";
 
 pub enum MensajePersistencia {
     Info(HashMap<String, Valor>),
+    ArchivoAPersistir(String),
     Cerrar,
 }
 
@@ -52,10 +54,15 @@ impl PersistidorHandler {
                                 val.get_tiempo(),
                             ));
                         }
-                        guardar_en_archivo(&self.archivo, vector);
+                        match guardar_en_archivo(&self.archivo, vector) {
+                            Ok(_) => (),
+                            Err(_) => break,
+                        };
                         self.instante = Instant::now();
                     }
                 }
+
+                MensajePersistencia::ArchivoAPersistir(a) => self.archivo = a,
 
                 MensajePersistencia::Cerrar => break,
             };
@@ -73,9 +80,19 @@ impl Persistidor {
     }
 
     pub fn persistir(&self, base_de_datos: HashMap<String, Valor>) {
-        self.persistidor
+        if self
+            .persistidor
             .send(MensajePersistencia::Info(base_de_datos))
-            .unwrap();
+            .is_ok()
+        {}
+    }
+
+    pub fn cambiar_archivo(&self, ruta_nueva: String) {
+        if self
+            .persistidor
+            .send(MensajePersistencia::ArchivoAPersistir(ruta_nueva))
+            .is_ok()
+        {}
     }
 }
 
@@ -135,30 +152,34 @@ fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>, time: Option<Du
     }
 }
 
-fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) {
-    let mut archivo = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(archivo)
-        .unwrap();
+fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) -> Result<()> {
+    let mut archivo = match OpenOptions::new().write(true).create(true).open(archivo) {
+        Ok(a) => a,
+        Err(e) => return Err(e),
+    };
 
     for instruccion in instrucciones.iter() {
         if let Err(e) = writeln!(archivo, "{}", instruccion) {
             println!("{:?}", e);
         }
     }
+    Ok(())
 }
 
 #[allow(dead_code)]
-fn cargar_en_vector(archivo: &str) -> Vec<String> {
+fn cargar_en_vector(archivo: &str) -> Result<Vec<String>> {
     let mut vector: Vec<String> = vec![];
-    let file = File::open(archivo).unwrap();
+    let file = match File::open(archivo) {
+        Ok(a) => a,
+        Err(e) => return Err(e),
+    };
+
     let reader = BufReader::new(file);
 
     for linea in reader.lines().flatten() {
         vector.push(linea);
     }
-    vector
+    Ok(vector)
 }
 
 #[cfg(test)]

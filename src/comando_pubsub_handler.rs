@@ -36,9 +36,8 @@ impl ComandoHandler for ComandoPubSubHandler {
     }
 }
 
-#[allow(dead_code)]
 pub fn es_comando_pubsub(comando: &str) -> bool {
-    let comandos = vec!["SUBSCRIBE"];
+    let comandos = vec!["SUBSCRIBE", "UNSUBSCRIBE", "PUBLISH", "PUBSUB"];
     comandos.iter().any(|&c| c == comando)
 }
 

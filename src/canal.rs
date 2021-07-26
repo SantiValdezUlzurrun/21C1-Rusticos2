@@ -28,11 +28,11 @@ impl Canal {
     }
 
     pub fn desuscribirse(&mut self, suscriptor: Cliente) {
-        let index = self
-            .suscriptores
-            .iter()
-            .position(|x| *x == suscriptor)
-            .unwrap();
+        let index = match self.suscriptores.iter().position(|x| *x == suscriptor) {
+            Some(i) => i,
+            None => return,
+        };
+
         self.suscriptores.remove(index);
     }
 
