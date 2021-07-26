@@ -54,7 +54,6 @@ impl BaseDeDatos {
         }
     }
 
-    #[allow(dead_code)]
     pub fn guardar_valor_con_expiracion(
         &mut self,
         clave: String,
@@ -218,8 +217,23 @@ impl BaseDeDatos {
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }
-
     pub fn new(archivo_persistencia: String) -> Self {
+        let (tx, rx) = channel();
+        let mut handler = PersistidorHandler::new(archivo_persistencia, 1, rx);
+
+        let hilo_persistencia = thread::spawn(move || {
+            handler.persistir();
+        });
+
+        BaseDeDatos {
+            hashmap: HashMap::<String, Valor>::new(),
+            persistidor: Persistidor::new(tx.clone()),
+            hilo: Option::Some(hilo_persistencia),
+            tx,
+        }
+    }
+    #[allow(dead_code)]
+    pub fn new_con_persistencia(archivo_persistencia: String) -> Self {
         let (tx, rx) = channel();
         let mut handler = PersistidorHandler::new(archivo_persistencia.clone(), 1, rx);
 
@@ -244,41 +258,54 @@ impl BaseDeDatos {
         let reader = BufReader::new(archivo);
         let mut lineas = reader.lines();
         while let Some(Ok(line)) = lineas.next() {
-            let v: Vec<&str> = line.split("\\r\\n").collect();
-            let mut param = v
-                .iter()
-                .filter(|x| {
-                    !x.to_string().contains('$')
-                        && !x.to_string().contains('*')
-                        && !x.to_string().contains('\n')
-                })
-                .collect::<Vec<_>>();
+            let mut elemento: Vec<&str> = line.split(':').collect();
 
-            param.pop();
+            if elemento.contains(&"STRING") {
+                let mut valor = Valor::no_expirable(TipoRedis::Str(elemento[2].to_string()));
 
-            if param[0] == &"SET" {
-                hashmap.insert(
-                    param[1].to_string(),
-                    Valor::new(TipoRedis::Str(param[2].to_string())),
-                );
-            } else if param[0] == &"LPUSH" {
-                param.remove(0);
-                let clave = param.remove(0).to_string();
-                hashmap.insert(
-                    clave,
-                    Valor::new(TipoRedis::Lista(
-                        param.iter().map(|x| x.to_string()).collect(),
-                    )),
-                );
+                if es_expirable(elemento.clone()) {
+                    let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+                    valor = Valor::expirable(TipoRedis::Str(elemento[2].to_string()), tiempo);
+                }
+                hashmap.insert(elemento[1].to_string(), valor);
+            } else if elemento.remove(0) == "LIST" {
+                let clave = elemento.remove(0).to_string();
+                let mut valor = Valor::no_expirable(TipoRedis::Lista(
+                    elemento.iter().map(|x| x.to_string()).collect(),
+                ));
+
+                if es_expirable(elemento.clone()) {
+                    let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+
+                    valor = Valor::expirable(
+                        TipoRedis::Lista(elemento.iter().map(|x| x.to_string()).collect()),
+                        tiempo,
+                    );
+                }
+                hashmap.insert(clave, valor);
             } else {
-                param.remove(0);
-                let clave = param.remove(0).to_string();
-                hashmap.insert(
-                    clave,
-                    Valor::new(TipoRedis::Set(HashSet::from_iter(
-                        param.iter().map(|x| x.to_string()).collect::<Vec<String>>(),
-                    ))),
-                );
+                elemento.remove(0);
+                let clave = elemento.remove(0).to_string();
+                let mut valor = Valor::no_expirable(TipoRedis::Set(HashSet::from_iter(
+                    elemento
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>(),
+                )));
+                if es_expirable(elemento.clone()) {
+                    let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+
+                    valor = Valor::expirable(
+                        TipoRedis::Set(HashSet::from_iter(
+                            elemento
+                                .iter()
+                                .map(|x| x.to_string())
+                                .collect::<Vec<String>>(),
+                        )),
+                        tiempo,
+                    );
+                }
+                hashmap.insert(clave, valor);
             }
         }
         BaseDeDatos {
@@ -287,6 +314,19 @@ impl BaseDeDatos {
             hilo: Option::Some(hilo_persistencia),
             tx,
         }
+    }
+}
+
+fn es_expirable(parametros: Vec<&str>) -> bool {
+    parametros.contains(&"EX")
+}
+fn obtener_tiempo_expiracion(parametros: Vec<&str>, support: &str) -> Option<u64> {
+    match parametros.rsplit(|p| p == &support.to_string()).next() {
+        Some(c) => match c[0].parse::<u64>() {
+            Ok(num) => Some(num),
+            Err(_) => None,
+        },
+        None => None,
     }
 }
 

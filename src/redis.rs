@@ -47,6 +47,7 @@ impl Redis {
     }
 
     pub fn iniciar(&mut self) -> Result<(), RedisError> {
+
         let direccion = match self.config.lock() {
             Ok(c) => c.direccion(),
             Err(_) => return Err(RedisError::ServerError),

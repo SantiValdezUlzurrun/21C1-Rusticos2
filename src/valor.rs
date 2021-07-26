@@ -11,11 +11,6 @@ pub struct Valor {
 }
 
 impl Valor {
-    #[allow(dead_code)]
-    pub fn new(valor: TipoRedis) -> Self {
-        Valor::no_expirable(valor)
-    }
-
     pub fn expirable(valor: TipoRedis, vida_util: u64) -> Self {
         Valor {
             valor,
@@ -47,6 +42,9 @@ impl Valor {
         } else {
             None
         }
+    }
+    pub fn get_tiempo(&self) -> Option<Duration> {
+        self.vida_util
     }
 
     pub fn obtener_expiracion(&self) -> isize {
