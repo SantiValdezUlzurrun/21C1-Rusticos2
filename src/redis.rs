@@ -47,7 +47,13 @@ impl Redis {
     }
 
     pub fn iniciar(&mut self) -> Result<(), RedisError> {
-        let listener = match TcpListener::bind(self.config.lock().unwrap().direccion()) {
+
+        let direccion = match self.config.lock() {
+            Ok(c) => c.direccion(),
+            Err(_) => return Err(RedisError::ServerError),
+        };
+
+        let listener = match TcpListener::bind(direccion) {
             Ok(l) => l,
             Err(_) => return Err(RedisError::InicializacionError),
         };
@@ -56,12 +62,12 @@ impl Redis {
             let clon_tabla = Arc::clone(&self.bdd);
             let clon_config = Arc::clone(&self.config);
             let logger = Logger::new(self.tx.clone());
+            let timeout = match self.config.lock() {
+                Ok(c) => c.timeout(),
+                Err(_) => continue,
+            };
 
-            let mut cliente = Cliente::new(
-                self.siguiente_id,
-                self.config.lock().unwrap().timeout(),
-                stream,
-            );
+            let mut cliente = Cliente::new(self.siguiente_id, timeout, stream);
             self.siguiente_id += 1;
 
             let handle = thread::spawn(move || {
@@ -87,7 +93,7 @@ impl Drop for Redis {
             }
         }
 
-        self.tx.send(Mensaje::Cerrar).unwrap();
+        if self.tx.send(Mensaje::Cerrar).is_ok() {}
 
         if let Some(hilo) = self.hilo_log.take() {
             if hilo.join().is_ok() {}
@@ -124,10 +130,10 @@ fn manejar_cliente(
                 Arc::clone(&config),
             );
 
-            config
-                .lock()
-                .unwrap()
-                .actualizar(&logger, cliente.clone(), Arc::clone(&tabla));
+            match config.lock() {
+                Ok(mut c) => c.actualizar(&logger, cliente.clone(), Arc::clone(&tabla)),
+                Err(_) => return Err(RedisError::ServerError),
+            }
 
             let respuesta = parsear_respuesta(&resultado);
 

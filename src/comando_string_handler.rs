@@ -299,7 +299,7 @@ fn mset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
     match bdd.lock() {
         Ok(mut bdd) => bdd.guardar_valores(parametros),
         Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
-    }
+    };
     ResultadoRedis::StrSimple("OK".to_string())
 }
 
