@@ -217,6 +217,8 @@ impl BaseDeDatos {
     fn persistirse(&self) {
         self.persistidor.persistir(self.hashmap.clone());
     }
+
+    #[allow(dead_code)]
     pub fn new(archivo_persistencia: String) -> Self {
         let (tx, rx) = channel();
         let mut handler = PersistidorHandler::new(archivo_persistencia, 1, rx);
@@ -232,7 +234,6 @@ impl BaseDeDatos {
             tx,
         }
     }
-    #[allow(dead_code)]
     pub fn new_con_persistencia(archivo_persistencia: String) -> Self {
         let (tx, rx) = channel();
         let mut handler = PersistidorHandler::new(archivo_persistencia.clone(), 1, rx);
