@@ -4,8 +4,6 @@ use crate::comando::crear_comando_handler;
 use crate::comando_info::ComandoInfo;
 use crate::log_handler::Mensaje;
 use crate::log_handler::{LogHandler, Logger};
-use crate::parser::parsear_respuesta;
-use crate::parser::Parser;
 use crate::redis_error::RedisError;
 use crate::Config;
 
@@ -110,17 +108,12 @@ fn manejar_cliente(
 ) -> Result<(), RedisError> {
     loop {
         if cliente.envio_informacion() {
-            let stream = match cliente.obtener_socket() {
-                Some(s) => s,
-                None => return Err(RedisError::ConeccionError),
+            let comando = match cliente.obtener_comando() {
+                Ok(Some(c)) => c,
+                Ok(None) => continue,
+                Err(e) => return Err(e),
             };
 
-            let parser = Parser::new(stream);
-
-            let comando = match parser.parsear_stream() {
-                Ok(orden) => orden,
-                Err(_) => return Err(RedisError::ServerError),
-            };
             logger.log_comando(cliente.obtener_addr(), comando.clone());
 
             let resultado = manejar_comando(
@@ -135,9 +128,7 @@ fn manejar_cliente(
                 Err(_) => return Err(RedisError::ServerError),
             }
 
-            let respuesta = parsear_respuesta(&resultado);
-
-            match cliente.enviar(respuesta) {
+            match cliente.enviar_resultado(&resultado) {
                 Ok(_) => (),
                 Err(e) => return Err(e),
             }

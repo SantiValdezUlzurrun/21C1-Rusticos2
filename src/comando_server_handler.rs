@@ -22,7 +22,9 @@ impl ComandoServerHandler {
             "CONFIG" => fconfig,
             "INFO" => info,
             "MONITOR" => monitor,
-            _ => flushdb,
+            "PING" => ping,
+            "FLUSHDB" => flushdb,
+            _ => comando_nulo,
         };
         ComandoServerHandler {
             comando,
@@ -40,8 +42,27 @@ impl ComandoHandler for ComandoServerHandler {
 
 #[allow(dead_code)]
 pub fn es_comando_pubsub(comando: &str) -> bool {
-    let comandos = vec!["FLUSHDB", "DBSIZE", "CONFIG"];
+    let comandos = vec!["FLUSHDB", "DBSIZE", "CONFIG", "PING"];
     comandos.iter().any(|&c| c == comando)
+}
+
+fn comando_nulo(
+    comando: &mut ComandoInfo,
+    _bdd: Arc<Mutex<BaseDeDatos>>,
+    _config: Arc<Mutex<Config>>,
+) -> ResultadoRedis {
+    ResultadoRedis::Error(format!(
+        "ComandoError el comando '{}' no existe",
+        comando.descripcion()
+    ))
+}
+
+fn ping(
+    _comando: &mut ComandoInfo,
+    _bdd: Arc<Mutex<BaseDeDatos>>,
+    _config: Arc<Mutex<Config>>,
+) -> ResultadoRedis {
+    ResultadoRedis::StrSimple("PONG".to_string())
 }
 
 fn flushdb(

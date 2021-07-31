@@ -1,3 +1,7 @@
+use crate::base_de_datos::ResultadoRedis;
+use crate::comando_info::ComandoInfo;
+use crate::parser::parsear_respuesta;
+use crate::parser::Parser;
 use crate::redis_error::RedisError;
 use std::time::Duration;
 use std::time::Instant;
@@ -16,7 +20,7 @@ pub struct Cliente {
 }
 
 impl Cliente {
-    pub fn new(id: Token, timeout: u64, socket: TcpStream) -> Self {
+    pub fn new(id: Token, timeout: u64, stream: TcpStream) -> Self {
         let duracion = match timeout {
             0 => None,
             t => Some(Duration::from_secs(t)),
@@ -26,7 +30,21 @@ impl Cliente {
             id,
             timeout: duracion,
             ultimo_mensaje: Instant::now(),
-            socket: Some(socket),
+            socket: Some(stream),
+        }
+    }
+
+    pub fn obtener_comando(&self) -> Result<Option<ComandoInfo>, RedisError> {
+        let stream = match self.obtener_socket() {
+            Some(s) => s,
+            None => return Err(RedisError::ConeccionError),
+        };
+
+        let parser = Parser::new(stream);
+
+        match parser.parsear_stream() {
+            Ok(orden) => Ok(Some(orden)),
+            Err(_) => Err(RedisError::ServerError),
         }
     }
 
@@ -39,18 +57,6 @@ impl Cliente {
         match socket.local_addr() {
             Ok(a) => format!("Token: {} IP: ", self.id) + &a.to_string(),
             Err(_) => format!("Token: {}", self.id),
-        }
-    }
-
-    pub fn obtener_socket(&self) -> Option<TcpStream> {
-        let socket = match &self.socket {
-            None => return None,
-            Some(t) => t,
-        };
-
-        match socket.try_clone() {
-            Ok(t) => Some(t),
-            Err(_) => None,
         }
     }
 
@@ -85,7 +91,12 @@ impl Cliente {
         esta_conectado && !paso_el_timeout
     }
 
-    pub fn enviar(&mut self, mensaje: String) -> Result<(), RedisError> {
+    pub fn enviar_resultado(&mut self, resultado: &ResultadoRedis) -> Result<(), RedisError> {
+        let mensaje = parsear_respuesta(&resultado);
+        self.enviar_mensaje(mensaje)
+    }
+
+    pub fn enviar_mensaje(&mut self, mensaje: String) -> Result<(), RedisError> {
         self.ultimo_mensaje = Instant::now();
 
         let socket = match &mut self.socket {
@@ -96,6 +107,18 @@ impl Cliente {
         match socket.write(mensaje.as_bytes()) {
             Ok(_) => Ok(()),
             Err(_) => Err(RedisError::ConeccionError),
+        }
+    }
+
+    fn obtener_socket(&self) -> Option<TcpStream> {
+        let socket = match &self.socket {
+            None => return None,
+            Some(t) => t,
+        };
+
+        match socket.try_clone() {
+            Ok(t) => Some(t),
+            Err(_) => None,
         }
     }
 }

@@ -19,7 +19,7 @@ impl Canal {
     pub fn publicar(&mut self, mensaje: String) -> usize {
         let mut publicados: usize = 0;
         for suscriptor in &mut self.suscriptores {
-            match suscriptor.enviar(mensaje.clone()) {
+            match suscriptor.enviar_mensaje(mensaje.clone()) {
                 Ok(_) => publicados += 1,
                 Err(_) => continue,
             }
