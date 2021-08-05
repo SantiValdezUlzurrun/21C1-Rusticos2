@@ -113,7 +113,6 @@ fn manejar_cliente(
                 Ok(None) => continue,
                 Err(e) => return Err(e),
             };
-
             logger.log_comando(cliente.obtener_addr(), comando.clone());
 
             let resultado = manejar_comando(

@@ -1,22 +1,55 @@
+use crate::cliente_http::ClienteHTTP;
+use crate::cliente_redis::ClienteRedis;
 use crate::base_de_datos::ResultadoRedis;
 use crate::comando_info::ComandoInfo;
-use crate::parser::parsear_respuesta;
-use crate::parser::Parser;
 use crate::redis_error::RedisError;
 use std::time::Duration;
 use std::time::Instant;
 
 use std::io::Write;
 use std::net::TcpStream;
+use std::fmt;
 
 pub type Token = i64;
 
-#[derive(Debug)]
+pub trait TipoCliente: ClienteClone {
+    fn obtener_comando(&mut self, stream: &mut TcpStream) -> Result<Option<ComandoInfo>, RedisError>;
+    fn parsear_resultado(&self, resultado: &ResultadoRedis) -> String;
+}
+pub trait ClienteClone {
+    fn clone_box(&self) -> Box<dyn TipoCliente + Send>;
+}
+
+impl Clone for Box<dyn TipoCliente + Send> {
+    fn clone(&self) -> Box<dyn TipoCliente + Send> {
+        self.clone_box()
+    }
+}
+
+impl<T> ClienteClone for T
+where
+    T: 'static + TipoCliente + Clone + Send,
+{
+    fn clone_box(&self) -> Box<dyn TipoCliente + Send> {
+        Box::new(self.clone())
+    }
+}
+
+fn tipo_cliente(id: Token, stream: TcpStream, mensaje: String) -> Box<dyn TipoCliente + Send> {
+
+    if mensaje.contains("HTTP") {
+        Box::new(ClienteHTTP::new(id, stream))
+    } else {
+        Box::new(ClienteRedis::new())
+    }
+}
+
 pub struct Cliente {
     id: Token,
     timeout: Option<Duration>,
     ultimo_mensaje: Instant,
     socket: Option<TcpStream>,
+    tipo: Box<dyn TipoCliente + Send>,
 }
 
 impl Cliente {
@@ -25,27 +58,29 @@ impl Cliente {
             0 => None,
             t => Some(Duration::from_secs(t)),
         };
+        let mut buffer = [0; 1024];
+        stream.peek(&mut buffer);
+        let porcion = match String::from_utf8(buffer.to_vec()){
+            Ok(s) => s,
+            Err(_) => "".to_string(),
+        };
 
+        let tipo = tipo_cliente(id, stream.try_clone().unwrap(), porcion);
         Cliente {
             id,
             timeout: duracion,
             ultimo_mensaje: Instant::now(),
             socket: Some(stream),
+            tipo
         }
     }
 
-    pub fn obtener_comando(&self) -> Result<Option<ComandoInfo>, RedisError> {
-        let stream = match self.obtener_socket() {
+    pub fn obtener_comando(&mut self) -> Result<Option<ComandoInfo>, RedisError> {
+        let mut stream = match self.obtener_socket() {
             Some(s) => s,
             None => return Err(RedisError::ConeccionError),
         };
-
-        let parser = Parser::new(stream);
-
-        match parser.parsear_stream() {
-            Ok(orden) => Ok(Some(orden)),
-            Err(_) => Err(RedisError::ServerError),
-        }
+        self.tipo.obtener_comando(&mut stream)
     }
 
     pub fn obtener_addr(&self) -> String {
@@ -92,7 +127,7 @@ impl Cliente {
     }
 
     pub fn enviar_resultado(&mut self, resultado: &ResultadoRedis) -> Result<(), RedisError> {
-        let mensaje = parsear_respuesta(&resultado);
+        let mensaje = self.tipo.parsear_resultado(&resultado);
         self.enviar_mensaje(mensaje)
     }
 
@@ -105,6 +140,11 @@ impl Cliente {
         };
 
         match socket.write(mensaje.as_bytes()) {
+            Ok(_) => (),
+            Err(_) => return Err(RedisError::ConeccionError),
+        };
+
+        match socket.flush() {
             Ok(_) => Ok(()),
             Err(_) => Err(RedisError::ConeccionError),
         }
@@ -130,6 +170,7 @@ impl Clone for Cliente {
             timeout: self.timeout,
             ultimo_mensaje: self.ultimo_mensaje,
             socket: self.obtener_socket(),
+            tipo: self.tipo.clone_box(),
         }
     }
 }
@@ -141,3 +182,14 @@ impl PartialEq for Cliente {
 }
 
 impl Eq for Cliente {}
+
+impl fmt::Debug for Cliente {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Cliente")
+         .field("id", &self.id)
+         .field("timeout", &self.timeout)
+         .field("ultimo_mensaje", &self.ultimo_mensaje)
+         .field("socket", &self.socket)
+         .finish()
+    }
+}

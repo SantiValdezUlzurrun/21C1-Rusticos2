@@ -1,7 +1,10 @@
 mod base_de_datos;
 mod canal;
 mod cliente;
+mod cliente_http;
+mod cliente_redis;
 mod comando;
+mod comando_http;
 mod comando_info;
 mod comando_key_handler;
 mod comando_list_handler;
@@ -12,6 +15,7 @@ mod comando_string_handler;
 mod config;
 mod log_handler;
 mod parser;
+mod http_parser;
 mod persistencia;
 mod redis;
 mod redis_error;
