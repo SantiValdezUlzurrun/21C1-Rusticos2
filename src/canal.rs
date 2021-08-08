@@ -28,7 +28,11 @@ impl Canal {
     }
 
     pub fn desuscribirse(&mut self, suscriptor: Cliente) {
-        let index = match self.suscriptores.iter().position(|x| *x == suscriptor) {
+        let index = match self
+            .suscriptores
+            .iter()
+            .position(|x| *x == suscriptor.clone())
+        {
             Some(i) => i,
             None => return,
         };

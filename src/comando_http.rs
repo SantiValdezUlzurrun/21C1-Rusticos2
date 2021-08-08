@@ -9,12 +9,15 @@ pub struct ComandoHTTP {
 
 impl ComandoHTTP {
     pub fn new(mut metodo: Vec<String>, _headers: Vec<String>, comando: Vec<String>) -> Self {
-
         ComandoHTTP {
             metodo: metodo.remove(0),
             _args: metodo,
             _headers,
-            comando_redis: if comando.is_empty() { None } else { Some(ComandoInfo::new(comando)) },
+            comando_redis: if comando.is_empty() {
+                None
+            } else {
+                Some(ComandoInfo::new(comando))
+            },
         }
     }
 
@@ -47,6 +50,9 @@ mod tests {
         let comando_http = ComandoHTTP::new(metodo, vec![], comando_redis);
 
         assert_eq!("GET".to_string(), comando_http.get_metodo());
-        assert_eq!(Some("clave".to_string()), comando_http.get_comando().unwrap().get_clave());
+        assert_eq!(
+            Some("clave".to_string()),
+            comando_http.get_comando().unwrap().get_clave()
+        );
     }
 }

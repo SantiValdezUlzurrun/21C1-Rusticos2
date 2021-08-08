@@ -1,12 +1,12 @@
-use crate::parser::ParserError;
 use crate::comando_http::ComandoHTTP;
+use crate::parser::ParserError;
 use std::io::{BufReader, Read};
 
 pub struct HTTPParser<R> {
     lector: BufReader<R>,
 }
 
-impl<R: Read+ std::fmt::Debug> HTTPParser<R> {
+impl<R: Read + std::fmt::Debug> HTTPParser<R> {
     pub fn new(stream: R) -> Self {
         HTTPParser {
             lector: BufReader::new(stream),
@@ -41,14 +41,12 @@ impl<R: Read+ std::fmt::Debug> HTTPParser<R> {
     }
 }
 
-fn obtener_metodo(linea: &str) -> Result<Vec<String>, ParserError>{
+fn obtener_metodo(linea: &str) -> Result<Vec<String>, ParserError> {
     let metodo: Vec<&str> = linea.split(' ').collect();
     if metodo.len() != 3 {
         Err(ParserError::MensajeVacioError)
     } else {
-        Ok(metodo.iter()
-           .map(|s| s.to_string())
-           .collect())
+        Ok(metodo.iter().map(|s| s.to_string()).collect())
     }
 }
 
@@ -61,12 +59,12 @@ fn obtener_headers(lineas: &mut Vec<&str>) -> Result<Vec<String>, ParserError> {
         }
         let header: Vec<&str> = linea.split(": ").collect();
         if header.len() != 2 {
-            return Err(ParserError::MensajeVacioError)
+            return Err(ParserError::MensajeVacioError);
         }
         headers.append(&mut header.iter().map(|s| s.to_string()).collect());
         index += 1;
     }
-    lineas.drain(0..index+1);
+    lineas.drain(0..index + 1);
     Ok(headers)
 }
 
@@ -107,7 +105,10 @@ mod tests {
         let comando = parser.parsear_stream().unwrap();
 
         assert_eq!("POST".to_string(), comando.get_metodo());
-        assert_eq!("set".to_string(), comando.get_comando().unwrap().get_nombre());
+        assert_eq!(
+            "set".to_string(),
+            comando.get_comando().unwrap().get_nombre()
+        );
     }
 
     #[test]

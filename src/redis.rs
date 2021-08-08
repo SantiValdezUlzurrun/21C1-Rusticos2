@@ -1,4 +1,5 @@
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis};
+use crate::cliente::crear_cliente;
 use crate::cliente::{Cliente, Token};
 use crate::comando::crear_comando_handler;
 use crate::comando_info::ComandoInfo;
@@ -66,7 +67,7 @@ impl Redis {
                 Err(_) => continue,
             };
 
-            let mut cliente = Cliente::new(self.siguiente_id, timeout, stream);
+            let mut cliente = crear_cliente(self.siguiente_id, timeout, stream);
             self.siguiente_id += 1;
 
             let handle = thread::spawn(move || {
