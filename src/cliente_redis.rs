@@ -49,13 +49,13 @@ impl TipoCliente for ClienteRedis {
     fn obtener_comando(&mut self) -> Result<Option<ComandoInfo>, RedisError> {
         let stream = match self.obtener_socket() {
             Some(s) => s,
-            None => return Err(RedisError::ConeccionError),
+            None => return Err(RedisError::Coneccion),
         };
         let parser = Parser::new(stream);
 
         match parser.parsear_stream() {
             Ok(orden) => Ok(Some(orden)),
-            Err(_) => Err(RedisError::ServerError),
+            Err(_) => Err(RedisError::Server),
         }
     }
 
@@ -103,7 +103,7 @@ impl TipoCliente for ClienteRedis {
     }
 
     fn enviar_resultado(&mut self, resultado: &ResultadoRedis) -> Result<(), RedisError> {
-        let mensaje = parsear_respuesta(&resultado);
+        let mensaje = parsear_respuesta(resultado);
         self.enviar_mensaje(mensaje)
     }
 
@@ -111,13 +111,13 @@ impl TipoCliente for ClienteRedis {
         self.ultimo_mensaje = Instant::now();
 
         let socket = match &mut self.socket {
-            None => return Err(RedisError::ConeccionError),
+            None => return Err(RedisError::Coneccion),
             Some(t) => t,
         };
 
         match socket.write(mensaje.as_bytes()) {
             Ok(_) => Ok(()),
-            Err(_) => Err(RedisError::ConeccionError),
+            Err(_) => Err(RedisError::Coneccion),
         }
     }
     fn obtener_token(&self) -> Token {

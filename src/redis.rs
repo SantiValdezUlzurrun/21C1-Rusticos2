@@ -50,12 +50,12 @@ impl Redis {
     pub fn iniciar(&mut self) -> Result<(), RedisError> {
         let direccion = match self.config.lock() {
             Ok(c) => c.direccion(),
-            Err(_) => return Err(RedisError::ServerError),
+            Err(_) => return Err(RedisError::Server),
         };
 
         let listener = match TcpListener::bind(direccion) {
             Ok(l) => l,
-            Err(_) => return Err(RedisError::InicializacionError),
+            Err(_) => return Err(RedisError::Inicializacion),
         };
 
         for stream in listener.incoming().flatten() {
@@ -124,8 +124,8 @@ fn manejar_cliente(
             );
 
             match config.lock() {
-                Ok(mut c) => c.actualizar(&logger, cliente.clone(), Arc::clone(&tabla)),
-                Err(_) => return Err(RedisError::ServerError),
+                Ok(mut c) => c.actualizar(logger, cliente.clone(), Arc::clone(&tabla)),
+                Err(_) => return Err(RedisError::Server),
             }
 
             match cliente.enviar_resultado(&resultado) {

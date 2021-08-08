@@ -329,7 +329,7 @@ fn obetener_tupla_valor_peso(
 
             if indice_peso == indice_valor {
                 let peso = match bdd.lock() {
-                    Ok(bdd) => match bdd.obtener_valor(&peso) {
+                    Ok(bdd) => match bdd.obtener_valor(peso) {
                         Some(TipoRedis::Str(peso)) => peso.clone(),
                         _ => return None,
                     },
@@ -434,7 +434,7 @@ fn sort_elemento_con_pesos_externos(
                 if objeto.contains(&valor.0) {
                     match bdd.lock() {
                         Ok(bdd) => {
-                            if let Some(TipoRedis::Str(valor)) = bdd.obtener_valor(&objeto) {
+                            if let Some(TipoRedis::Str(valor)) = bdd.obtener_valor(objeto) {
                                 pusheado = true;
                                 resultado.push(ResultadoRedis::StrSimple(valor.to_string()))
                             }

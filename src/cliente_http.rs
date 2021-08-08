@@ -40,7 +40,7 @@ impl ClienteHTTP {
         );
         match self.enviar_mensaje(respuesta) {
             Ok(_) => Ok(None),
-            Err(_) => Err(RedisError::ServerError),
+            Err(_) => Err(RedisError::Server),
         }
     }
     fn obtener_comando_de_post(
@@ -49,7 +49,7 @@ impl ClienteHTTP {
     ) -> Result<Option<ComandoInfo>, RedisError> {
         match comando.get_comando() {
             Some(c) => Ok(Some(c)),
-            None => Err(RedisError::ServerError),
+            None => Err(RedisError::Server),
         }
     }
 
@@ -57,7 +57,7 @@ impl ClienteHTTP {
         let respuesta = "HTTP/1.1 400 BAD REQUEST\r\n\r\n".to_string();
         match self.enviar_mensaje(respuesta) {
             Ok(_) => Ok(None),
-            Err(_) => Err(RedisError::ServerError),
+            Err(_) => Err(RedisError::Server),
         }
     }
 
@@ -78,13 +78,13 @@ impl TipoCliente for ClienteHTTP {
     fn obtener_comando(&mut self) -> Result<Option<ComandoInfo>, RedisError> {
         let stream = match self.obtener_socket() {
             Some(s) => s,
-            None => return Err(RedisError::ConeccionError),
+            None => return Err(RedisError::Coneccion),
         };
         self.mando = true;
         let parser = HTTPParser::new(stream);
         let comando_http = match parser.parsear_stream() {
             Ok(orden) => orden,
-            Err(_) => return Err(RedisError::ServerError),
+            Err(_) => return Err(RedisError::Server),
         };
 
         match comando_http.get_metodo().as_str() {
@@ -116,24 +116,24 @@ impl TipoCliente for ClienteHTTP {
 
     fn enviar_resultado(&mut self, resultado: &ResultadoRedis) -> Result<(), RedisError> {
         self.mando = true;
-        let mensaje = parsear_resultado(&resultado);
+        let mensaje = parsear_resultado(resultado);
         self.enviar_mensaje(mensaje)
     }
 
     fn enviar_mensaje(&mut self, mensaje: String) -> Result<(), RedisError> {
         let socket = match &mut self.socket {
-            None => return Err(RedisError::ConeccionError),
+            None => return Err(RedisError::Coneccion),
             Some(t) => t,
         };
 
         match socket.write(mensaje.as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err(RedisError::ConeccionError),
+            Err(_) => return Err(RedisError::Coneccion),
         };
 
         match socket.flush() {
             Ok(_) => Ok(()),
-            Err(_) => Err(RedisError::ConeccionError),
+            Err(_) => Err(RedisError::Coneccion),
         }
     }
 
@@ -143,7 +143,7 @@ impl TipoCliente for ClienteHTTP {
 }
 
 fn parsear_resultado(resultado: &ResultadoRedis) -> String {
-    format!("HTTP/1.1 200 OK\r\n\r\n{}", parsear_respuesta(&resultado))
+    format!("HTTP/1.1 200 OK\r\n\r\n{}", parsear_respuesta(resultado))
 }
 
 impl Clone for ClienteHTTP {
