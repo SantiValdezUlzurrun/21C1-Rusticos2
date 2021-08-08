@@ -58,7 +58,7 @@ impl ComandoInfo {
 
         for param in self.parametros.iter() {
             descripcion += " ";
-            descripcion += &param;
+            descripcion += param;
         }
         descripcion
     }

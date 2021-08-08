@@ -1,4 +1,5 @@
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis};
+use crate::cliente::crear_cliente;
 use crate::cliente::{Cliente, Token};
 use crate::comando::crear_comando_handler;
 use crate::comando_info::ComandoInfo;
@@ -49,12 +50,12 @@ impl Redis {
     pub fn iniciar(&mut self) -> Result<(), RedisError> {
         let direccion = match self.config.lock() {
             Ok(c) => c.direccion(),
-            Err(_) => return Err(RedisError::ServerError),
+            Err(_) => return Err(RedisError::Server),
         };
 
         let listener = match TcpListener::bind(direccion) {
             Ok(l) => l,
-            Err(_) => return Err(RedisError::InicializacionError),
+            Err(_) => return Err(RedisError::Inicializacion),
         };
 
         for stream in listener.incoming().flatten() {
@@ -66,7 +67,7 @@ impl Redis {
                 Err(_) => continue,
             };
 
-            let mut cliente = Cliente::new(self.siguiente_id, timeout, stream);
+            let mut cliente = crear_cliente(self.siguiente_id, timeout, stream);
             self.siguiente_id += 1;
 
             let handle = thread::spawn(move || {
@@ -113,7 +114,6 @@ fn manejar_cliente(
                 Ok(None) => continue,
                 Err(e) => return Err(e),
             };
-
             logger.log_comando(cliente.obtener_addr(), comando.clone());
 
             let resultado = manejar_comando(
@@ -124,8 +124,8 @@ fn manejar_cliente(
             );
 
             match config.lock() {
-                Ok(mut c) => c.actualizar(&logger, cliente.clone(), Arc::clone(&tabla)),
-                Err(_) => return Err(RedisError::ServerError),
+                Ok(mut c) => c.actualizar(logger, cliente.clone(), Arc::clone(&tabla)),
+                Err(_) => return Err(RedisError::Server),
             }
 
             match cliente.enviar_resultado(&resultado) {

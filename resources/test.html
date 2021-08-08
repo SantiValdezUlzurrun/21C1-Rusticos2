@@ -1,0 +1,31 @@
+<html>
+    <head>
+       <title>Probar Redis</title>
+    </head>
+    <body>
+    <p id="respuesta"></p>
+    Comando <input id="comando" type="text" placeholder="SET KEY VALUE">
+    <button id="boton-envio" onclick="enviar_formulario()"> Enviar </button>
+
+
+    <script>
+      function enviar_formulario(){
+        var str = document.getElementById("comando").value; 
+
+        var xhr = new XMLHttpRequest();
+        
+        xhr.onload = function () {
+          // do something to response
+            if ( xhr.readyState == 4 &&  xhr.status == 200) {
+            var respuesta = document.getElementById("respuesta");
+            respuesta.innerHTML = this.responseText;
+                alert( this.responseText);
+            }
+        };
+        xhr.open('POST', '/');
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.setRequestHeader('Accept', 'text/plain');
+        xhr.send(("comando="+str).replace(/\s/g, "+"));
+      }
+    </script>
+</html>
