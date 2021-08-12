@@ -11,13 +11,13 @@ impl ComandoInfo {
     pub fn new(mut comando_parseado: Vec<String>) -> Self {
         if comando_parseado.len() == 1 {
             return ComandoInfo {
-                nombre: comando_parseado[0].clone(),
+                nombre: comando_parseado[0].to_uppercase(),
                 parametros: vec![],
                 index: 0,
             };
         }
 
-        let nombre = comando_parseado[0].clone();
+        let nombre = comando_parseado[0].to_uppercase();
         comando_parseado.remove(0);
         ComandoInfo {
             nombre,
