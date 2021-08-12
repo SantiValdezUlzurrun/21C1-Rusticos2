@@ -174,6 +174,55 @@ impl TipoCliente for ClienteHTTP {
     fn obtener_token(&self) -> Token {
         self.id
     }
+
+    fn soporta_comando(&self, comando: &str) -> bool {
+        let comandos = vec![
+            "COPY",
+            "DEL",
+            "EXISTS",
+            "RENAME",
+            "EXPIRE",
+            "EXPIREAT",
+            "PERSIST",
+            "TTL",
+            "TOUCH",
+            "KEYS",
+            "SORT",
+            "TYPE",
+            "LINDEX",
+            "LPOP",
+            "RPOP",
+            "LPUSH",
+            "LPUSHX",
+            "RPUSH",
+            "RPUSHX",
+            "LRANGE",
+            "LREM",
+            "LSET",
+            "LLEN",
+            "SADD",
+            "SCARD",
+            "SISMEMBER",
+            "SMEMBERS",
+            "SREM",
+            "GET",
+            "SET",
+            "APPEND",
+            "STRLEN",
+            "INCRBY",
+            "DECRBY",
+            "MGET",
+            "MSET",
+            "GETSET",
+            "GETDEL",
+            "FLUSHDB",
+            "DBSIZE",
+            "CONFIG",
+            "INFO",
+            "PING",
+        ];
+        comandos.iter().any(|&c| c == comando)
+    }
 }
 
 impl Clone for ClienteHTTP {

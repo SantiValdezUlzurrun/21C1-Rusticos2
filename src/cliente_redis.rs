@@ -123,6 +123,10 @@ impl TipoCliente for ClienteRedis {
     fn obtener_token(&self) -> Token {
         self.id
     }
+
+    fn soporta_comando(&self, _comando: &str) -> bool {
+        true
+    }
 }
 
 impl Clone for ClienteRedis {
