@@ -3,23 +3,28 @@
        <title>Probar Redis</title>
     </head>
     <body>
-    <p id="respuesta"></p>
-    Comando <input id="comando" type="text" placeholder="SET KEY VALUE">
-    <button id="boton-envio" onclick="enviar_formulario()"> Enviar </button>
-
-
+    <div id = 'header'> <FONT FACE="monospace" WEIGHT= bold SIZE=6 COLOR= #262626> Redis REPL By 2Rusticos</FONT></div>
+    <div id = 'log'></div>
+    <div id = 'comando'>
+      <input id="input" type="text" placeholder= 'SET KEY VALUE'>
+      <button id="boton-envio" onclick="addcode()"> Enviar </button>
+    </div>
+      
+  
     <script>
-      function enviar_formulario(){
-        var str = document.getElementById("comando").value; 
-
+      function addcode(){
+        var str = document.getElementById("input").value;
         var xhr = new XMLHttpRequest();
         
+        mostrar("> " + str,"#595540");
+
+        if(pantalla_llena()){
+          eleminar_comando_mas_viejo()
+        }
         xhr.onload = function () {
           // do something to response
-            if ( xhr.readyState == 4 &&  xhr.status == 200) {
-            var respuesta = document.getElementById("respuesta");
-            respuesta.innerHTML = this.responseText;
-                alert( this.responseText);
+            if ( xhr.readyState == 4 &&  xhr.status == 200) {            
+            mostrar(this.responseText,"#000")
             }
         };
         xhr.open('POST', '/');
@@ -27,5 +32,79 @@
         xhr.setRequestHeader('Accept', 'text/plain');
         xhr.send(("comando="+str).replace(/\s/g, "+"));
       }
+
+      function pantalla_llena(){
+        return document.getElementById("log").childElementCount > 16
+      }
+
+      function eleminar_comando_mas_viejo(){
+        document.getElementById("log").firstChild.remove()
+        document.getElementById("log").firstChild.remove()
+      }
+
+      function mostrar(str,color){
+        var element = document.createElement("P");
+        element.appendChild(document.createTextNode(str));
+        element.style.color = color;
+        document.getElementById("log").appendChild(element);
+      } 
     </script>
+
+    <style>
+
+      body{
+        background-color: #262626;
+      }
+      #log{
+        width:90%;
+        height:75%;
+        background-color:#ffefd5;
+        border:5px solid #595540;
+        margin:auto;
+        font-family:"monospace";
+        font-weight: bold;
+        font-size:0.95em;
+      }
+      #comando{
+        width:50%;
+        height:5.5%;
+        background-color:#595540;
+        margin:auto;
+      }
+      #input{
+        width:90%;
+        height:100%;
+        border:5px solid #595540;
+        background-color:#cc8139;
+        font-family:"monospace";
+        color: #262626;
+      }
+      ::placeholder {
+        color: #262626;
+        text-align: left;
+        font-family:monospace;
+      }
+      #boton-envio{
+        width:9%;
+        height:85%;
+        
+        background-color:#cc8139;
+        color: #262626;
+        font-family:monospace;
+      }
+      #header{
+        margin:auto;
+        margin-top:1em;
+        padding:0em;
+        padding-top:0.25em;
+        padding-bottom:0.25em;
+        border:5px solid #595540;
+        text-align:center;
+        vertical-align: center;
+        height:6%;
+        width:500px;
+        font-weight: bold;
+        background-color:#cc8139
+      }
+    </style>
 </html>

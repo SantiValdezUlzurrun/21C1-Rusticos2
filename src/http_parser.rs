@@ -124,7 +124,7 @@ mod tests {
 
         assert_eq!("POST".to_string(), comando.get_metodo());
         assert_eq!(
-            "set".to_string(),
+            "SET".to_string(),
             comando.get_comando().unwrap().get_nombre()
         );
     }
