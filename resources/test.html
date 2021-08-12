@@ -1,10 +1,60 @@
 <html>
     <head>
        <title>Probar Redis</title>
+       <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
     </head>
     <body>
     <div id = 'header'> <FONT FACE="monospace" WEIGHT= bold SIZE=6 COLOR= #262626> Redis REPL By 2Rusticos</FONT></div>
-    <div id = 'log'></div>
+    <div id = 'log'>
+      <div id = 'discleimer'>
+        <p> Bienvenido!! Esta es la pagina web interactiva del servidor redis que disenamos para Taller de Programacion de FIUBA </p>
+
+        <p> "COPY",
+            "DEL",
+            "EXISTS",
+            "RENAME",
+            "EXPIRE",
+            "EXPIREAT",
+            "PERSIST",
+            "TTL",
+            "TOUCH",
+            "KEYS",
+            "SORT",
+            "TYPE",
+            "LINDEX",
+            "LPOP",
+            "RPOP",
+            "LPUSH",
+            "LPUSHX",
+            "RPUSH",
+            "RPUSHX",
+            "LRANGE",
+            "LREM",
+            "LSET",
+            "LLEN",
+            "SADD",
+            "SCARD",
+            "SISMEMBER",
+            "SMEMBERS",
+            "SREM",
+            "GET",
+            "SET",
+            "APPEND",
+            "STRLEN",
+            "INCRBY",
+            "DECRBY",
+            "MGET",
+            "MSET",
+            "GETSET",
+            "GETDEL",
+            "FLUSHDB",
+            "DBSIZE",
+            "CONFIG",
+            "INFO",
+            "PING",
+        </p>
+      </div>
+    </div>
     <div id = 'comando'>
       <input id="input" type="text" placeholder= 'SET KEY VALUE'>
       <button id="boton-envio" onclick="addcode()"> Enviar </button>
@@ -16,6 +66,12 @@
         var str = document.getElementById("input").value;
         var xhr = new XMLHttpRequest();
         
+        if(document.getElementById("log").childElementCount == 1){
+          document.getElementById("log").firstChild.remove();
+          document.getElementById("log").firstChild.remove();
+          document.getElementById("log").firstChild.remove();
+        }
+
         mostrar("> " + str,"#595540");
 
         if(pantalla_llena()){
@@ -65,11 +121,24 @@
         font-weight: bold;
         font-size:0.95em;
       }
+
+      #discleimer{
+        width:97%;
+        height:30%;
+        border:15px solid #ffefd5;
+        background-color: #262626;
+        text-align: center;
+        font-family:monospace;
+        font-size:1.35em;
+        color: #cc8139;;
+        margin:auto;
+      }
       #comando{
         width:50%;
         height:5.5%;
         background-color:#595540;
         margin:auto;
+
       }
       #input{
         width:90%;
