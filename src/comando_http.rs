@@ -36,7 +36,6 @@ impl ComandoHTTP {
             Some(self.args[0].to_string())
         }
     }
-
 }
 
 #[cfg(test)]
@@ -67,7 +66,11 @@ mod tests {
 
     #[test]
     fn comando_http_devuelve_el_argumento_correctamente() {
-        let metodo = vec!["GET".to_string(), "/favicon.ico".to_string(), "HTTP/1.1".to_string()];
+        let metodo = vec![
+            "GET".to_string(),
+            "/favicon.ico".to_string(),
+            "HTTP/1.1".to_string(),
+        ];
 
         let comando_redis = vec![
             "GET".to_string(),
@@ -80,6 +83,9 @@ mod tests {
 
         let comando_http = ComandoHTTP::new(metodo, vec![], comando_redis);
 
-        assert_eq!(Some("/favicon.ico".to_string()), comando_http.get_argumento());
+        assert_eq!(
+            Some("/favicon.ico".to_string()),
+            comando_http.get_argumento()
+        );
     }
 }

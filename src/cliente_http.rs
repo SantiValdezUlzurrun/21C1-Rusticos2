@@ -1,15 +1,15 @@
-use std::fs::File;
 use crate::base_de_datos::ResultadoRedis;
 use crate::cliente::{TipoCliente, Token};
 use crate::comando_http::ComandoHTTP;
 use crate::comando_info::ComandoInfo;
-use crate::http_parser::{HTTPParser, parsear_respuesta};
+use crate::http_parser::{parsear_respuesta, HTTPParser};
 use crate::redis_error::RedisError;
 use std::fs::read_to_string;
+use std::fs::File;
 
 use std::fmt;
-use std::io::Write;
 use std::io::Read;
+use std::io::Write;
 use std::net::TcpStream;
 
 pub struct ClienteHTTP {
@@ -29,11 +29,9 @@ impl ClienteHTTP {
 
         let mut buffer = Vec::new();
         match File::open("resources/favicon.png") {
-            Ok(mut file) => {
-                match file.read_to_end(&mut buffer) {
-                    Ok(_) => (),
-                    Err(_) => buffer = Vec::new(),
-                }
+            Ok(mut file) => match file.read_to_end(&mut buffer) {
+                Ok(_) => (),
+                Err(_) => buffer = Vec::new(),
             },
             Err(_) => buffer = Vec::new(),
         };
@@ -63,7 +61,6 @@ impl ClienteHTTP {
                 Ok(_) => Ok(None),
                 Err(_) => Err(RedisError::Server),
             }
-
         } else {
             let respuesta = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n{}",

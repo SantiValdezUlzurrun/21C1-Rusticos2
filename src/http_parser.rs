@@ -45,7 +45,7 @@ impl<R: Read + std::fmt::Debug> HTTPParser<R> {
 pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
     match res {
         ResultadoRedis::StrSimple(cad) => format!("(string) {}", cad),
-        ResultadoRedis::BulkStr(cad) => format!("(bulk-string) {}" , cad),
+        ResultadoRedis::BulkStr(cad) => format!("(bulk-string) {}", cad),
         ResultadoRedis::Int(ent) => format!("(int) {}", ent),
         ResultadoRedis::Vector(vec) => format!(
             "(vector) {}",
