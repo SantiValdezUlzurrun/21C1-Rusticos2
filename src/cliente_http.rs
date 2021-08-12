@@ -22,7 +22,7 @@ pub struct ClienteHTTP {
 
 impl ClienteHTTP {
     pub fn new(id: Token, socket: TcpStream) -> Self {
-        let pag_index = match read_to_string("resources/test.html") {
+        let pag_index = match read_to_string("resources/index.html") {
             Ok(s) => s,
             Err(_) => "<html><body>Error al levantar la pagina</body></html>".to_string(),
         };
