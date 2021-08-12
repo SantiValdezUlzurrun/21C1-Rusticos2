@@ -44,13 +44,13 @@ impl<R: Read + std::fmt::Debug> HTTPParser<R> {
 
 pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
     match res {
-        ResultadoRedis::StrSimple(cad) => format!("(string) {}", cad),
-        ResultadoRedis::BulkStr(cad) => format!("(bulk-string) {}", cad),
-        ResultadoRedis::Int(ent) => format!("(int) {}", ent),
+        ResultadoRedis::StrSimple(cad) => cad.to_string(),
+        ResultadoRedis::BulkStr(cad) => format!("'{}'", cad),
+        ResultadoRedis::Int(ent) => format!("(integer) {}", ent),
         ResultadoRedis::Vector(vec) => format!(
             "(vector) {}",
             vec.iter()
-                .map(|r| parsear_respuesta(r))
+                .map(|r| format!(" {}", parsear_respuesta(r)))
                 .collect::<Vec<String>>()
                 .join("")
         ),
