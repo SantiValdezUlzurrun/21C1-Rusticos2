@@ -2,12 +2,13 @@ use crate::base_de_datos::ResultadoRedis;
 use crate::cliente::{TipoCliente, Token};
 use crate::comando_http::ComandoHTTP;
 use crate::comando_info::ComandoInfo;
-use crate::http_parser::HTTPParser;
-use crate::parser::parsear_respuesta; //TODO: Cambiar por http_parsear_respuesta
+use crate::http_parser::{parsear_respuesta, HTTPParser};
 use crate::redis_error::RedisError;
 use std::fs::read_to_string;
+use std::fs::File;
 
 use std::fmt;
+use std::io::Read;
 use std::io::Write;
 use std::net::TcpStream;
 
@@ -16,31 +17,60 @@ pub struct ClienteHTTP {
     socket: Option<TcpStream>,
     mando: bool,
     pag_index: String,
+    icono: Vec<u8>,
 }
 
 impl ClienteHTTP {
     pub fn new(id: Token, socket: TcpStream) -> Self {
-        let pag_index = match read_to_string("resources/test.html") {
+        let pag_index = match read_to_string("resources/index.html") {
             Ok(s) => s,
             Err(_) => "<html><body>Error al levantar la pagina</body></html>".to_string(),
+        };
+
+        let mut buffer = Vec::new();
+        match File::open("resources/favicon.png") {
+            Ok(mut file) => match file.read_to_end(&mut buffer) {
+                Ok(_) => (),
+                Err(_) => buffer = Vec::new(),
+            },
+            Err(_) => buffer = Vec::new(),
         };
 
         ClienteHTTP {
             id,
             pag_index,
+            icono: buffer,
             socket: Some(socket),
             mando: false,
         }
     }
 
-    fn manejar_get(&mut self, _comando: ComandoHTTP) -> Result<Option<ComandoInfo>, RedisError> {
-        let respuesta = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n{}",
-            self.pag_index
-        );
-        match self.enviar_mensaje(respuesta) {
-            Ok(_) => Ok(None),
-            Err(_) => Err(RedisError::Server),
+    fn manejar_get(&mut self, comando: ComandoHTTP) -> Result<Option<ComandoInfo>, RedisError> {
+        if comando.get_argumento() == Some("/favicon.ico".to_string()) {
+            let respuesta = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: image/gif\r\nContent-Length: {}\r\n\r\n",
+                self.icono.len(),
+            );
+
+            match self.enviar_mensaje(respuesta) {
+                Ok(_) => (),
+                Err(_) => return Err(RedisError::Server),
+            };
+
+            match self.enviar_bytes(&self.icono.clone()) {
+                Ok(_) => Ok(None),
+                Err(_) => Err(RedisError::Server),
+            }
+        } else {
+            let respuesta = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n{}",
+                self.pag_index
+            );
+
+            match self.enviar_mensaje(respuesta) {
+                Ok(_) => Ok(None),
+                Err(_) => Err(RedisError::Server),
+            }
         }
     }
     fn obtener_comando_de_post(
@@ -70,6 +100,23 @@ impl ClienteHTTP {
         match socket.try_clone() {
             Ok(t) => Some(t),
             Err(_) => None,
+        }
+    }
+
+    fn enviar_bytes(&mut self, bytes: &[u8]) -> Result<(), RedisError> {
+        let socket = match &mut self.socket {
+            None => return Err(RedisError::Coneccion),
+            Some(t) => t,
+        };
+
+        match socket.write(bytes) {
+            Ok(_) => (),
+            Err(_) => return Err(RedisError::Coneccion),
+        };
+
+        match socket.flush() {
+            Ok(_) => Ok(()),
+            Err(_) => Err(RedisError::Coneccion),
         }
     }
 }
@@ -116,34 +163,66 @@ impl TipoCliente for ClienteHTTP {
 
     fn enviar_resultado(&mut self, resultado: &ResultadoRedis) -> Result<(), RedisError> {
         self.mando = true;
-        let mensaje = parsear_resultado(resultado);
+        let mensaje = format!("HTTP/1.1 200 OK\r\n\r\n{}", parsear_respuesta(resultado));
         self.enviar_mensaje(mensaje)
     }
 
     fn enviar_mensaje(&mut self, mensaje: String) -> Result<(), RedisError> {
-        let socket = match &mut self.socket {
-            None => return Err(RedisError::Coneccion),
-            Some(t) => t,
-        };
-
-        match socket.write(mensaje.as_bytes()) {
-            Ok(_) => (),
-            Err(_) => return Err(RedisError::Coneccion),
-        };
-
-        match socket.flush() {
-            Ok(_) => Ok(()),
-            Err(_) => Err(RedisError::Coneccion),
-        }
+        self.enviar_bytes(mensaje.as_bytes())
     }
 
     fn obtener_token(&self) -> Token {
         self.id
     }
-}
 
-fn parsear_resultado(resultado: &ResultadoRedis) -> String {
-    format!("HTTP/1.1 200 OK\r\n\r\n{}", parsear_respuesta(resultado))
+    fn soporta_comando(&self, comando: &str) -> bool {
+        let comandos = vec![
+            "COPY",
+            "DEL",
+            "EXISTS",
+            "RENAME",
+            "EXPIRE",
+            "EXPIREAT",
+            "PERSIST",
+            "TTL",
+            "TOUCH",
+            "KEYS",
+            "SORT",
+            "TYPE",
+            "LINDEX",
+            "LPOP",
+            "RPOP",
+            "LPUSH",
+            "LPUSHX",
+            "RPUSH",
+            "RPUSHX",
+            "LRANGE",
+            "LREM",
+            "LSET",
+            "LLEN",
+            "SADD",
+            "SCARD",
+            "SISMEMBER",
+            "SMEMBERS",
+            "SREM",
+            "GET",
+            "SET",
+            "APPEND",
+            "STRLEN",
+            "INCRBY",
+            "DECRBY",
+            "MGET",
+            "MSET",
+            "GETSET",
+            "GETDEL",
+            "FLUSHDB",
+            "DBSIZE",
+            "CONFIG",
+            "INFO",
+            "PING",
+        ];
+        comandos.iter().any(|&c| c == comando)
+    }
 }
 
 impl Clone for ClienteHTTP {
@@ -153,6 +232,7 @@ impl Clone for ClienteHTTP {
             mando: self.mando,
             socket: self.obtener_socket(),
             pag_index: self.pag_index.clone(),
+            icono: self.icono.clone(),
         }
     }
 }

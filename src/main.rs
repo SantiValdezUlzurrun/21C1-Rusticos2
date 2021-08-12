@@ -8,6 +8,7 @@ mod comando_http;
 mod comando_info;
 mod comando_key_handler;
 mod comando_list_handler;
+mod comando_nulo_handler;
 mod comando_pubsub_handler;
 mod comando_server_handler;
 mod comando_set_handler;
