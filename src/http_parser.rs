@@ -1,3 +1,4 @@
+use crate::base_de_datos::ResultadoRedis;
 use crate::comando_http::ComandoHTTP;
 use crate::parser::ParserError;
 use std::io::{BufReader, Read};
@@ -38,6 +39,23 @@ impl<R: Read + std::fmt::Debug> HTTPParser<R> {
             Err(e) => return Err(e),
         };
         Ok(ComandoHTTP::new(metodo, headers, comando))
+    }
+}
+
+pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
+    match res {
+        ResultadoRedis::StrSimple(cad) => format!("(string) {}", cad),
+        ResultadoRedis::BulkStr(cad) => format!("(bulk-string) {}" , cad),
+        ResultadoRedis::Int(ent) => format!("(int) {}", ent),
+        ResultadoRedis::Vector(vec) => format!(
+            "(vector) {}",
+            vec.iter()
+                .map(|r| parsear_respuesta(r))
+                .collect::<Vec<String>>()
+                .join("")
+        ),
+        ResultadoRedis::Nil => "(nil)".to_string(),
+        ResultadoRedis::Error(e) => format!("(error) {}", e),
     }
 }
 
