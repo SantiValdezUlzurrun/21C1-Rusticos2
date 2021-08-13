@@ -94,7 +94,7 @@ fn set(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
     };
     if parametros.len() == 1 {
         return ResultadoRedis::Error(
-            "ERR wrong number of arguments for 'set' command".to_string()
+            "ERR wrong number of arguments for 'set' command".to_string(),
         );
     }
     match bdd.lock() {
@@ -220,7 +220,7 @@ fn getdel(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
                 bdd.eliminar_clave(&clave);
                 ResultadoRedis::BulkStr(valor)
             }
-            Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string())
+            Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
         },
         _ => ResultadoRedis::Nil,
     }
