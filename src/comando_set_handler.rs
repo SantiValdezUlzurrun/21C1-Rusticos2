@@ -39,22 +39,28 @@ pub fn es_comando_set(comando: &str) -> bool {
 fn sadd(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,
-        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'sadd' command".to_string(),
+            )
+        }
     };
     match bdd.lock() {
         Ok(mut bdd) => {
-            let (a_agregar, cantidad_ingresada) = match bdd.obtener_valor(&clave){
+            let (a_agregar, cantidad_ingresada) = match bdd.obtener_valor(&clave) {
                 Some(TipoRedis::Set(set)) => aggregar_al_set(comando, &mut set.clone()),
                 None => aggregar_al_set(comando, &mut HashSet::new()),
-                _ => return ResultadoRedis::Error(
-                    "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                    .to_string(),
-                    ),
+                _ => {
+                    return ResultadoRedis::Error(
+                        "WRONGTYPE Operation against a key holding the wrong kind of value"
+                            .to_string(),
+                    )
+                }
             };
             bdd.guardar_valor(clave, TipoRedis::Set(a_agregar));
             ResultadoRedis::Int(cantidad_ingresada as isize)
         }
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
 
@@ -76,7 +82,11 @@ fn aggregar_al_set(
 fn scard(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,
-        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'scard' command".to_string(),
+            )
+        }
     };
 
     match bdd.lock() {
@@ -84,18 +94,21 @@ fn scard(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRe
             Some(TipoRedis::Set(set)) => ResultadoRedis::Int(set.len() as isize),
             None => ResultadoRedis::Int(0),
             _ => ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                    .to_string(),
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
             ),
         },
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
 
 fn sismember(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,
-        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'scard' command".to_string(),
+            )
+        }
     };
 
     match bdd.lock() {
@@ -103,24 +116,32 @@ fn sismember(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resulta
             Some(TipoRedis::Set(set)) => {
                 let parametro = match comando.get_parametro() {
                     Some(parametro) => parametro,
-                    None => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
+                    None => {
+                        return ResultadoRedis::Error(
+                            "WRONGTYPE Operation against a key holding the wrong kind of value"
+                                .to_string(),
+                        )
+                    }
                 };
                 ResultadoRedis::Int(if set.contains(&parametro) { 1 } else { 0 })
             }
             None => ResultadoRedis::Int(0),
             _ => ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                    .to_string(),
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
             ),
         },
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
 
 fn smembers(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,
-        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'smembers' command".to_string(),
+            )
+        }
     };
 
     match bdd.lock() {
@@ -134,34 +155,39 @@ fn smembers(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
             }
             None => ResultadoRedis::Vector(vec![]),
             _ => ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                    .to_string(),
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
             ),
         },
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
 
 fn srem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,
-        None => return ResultadoRedis::Error("Clave no encontrada".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'srem' command".to_string(),
+            )
+        }
     };
 
     match bdd.lock() {
         Ok(mut bdd) => {
-            let (a_agregar, cantidad_eliminada) =match bdd.obtener_valor(&clave) {
+            let (a_agregar, cantidad_eliminada) = match bdd.obtener_valor(&clave) {
                 Some(TipoRedis::Set(set)) => eliminar_del_set(comando, &mut set.clone()),
                 None => return ResultadoRedis::Int(0),
-                _ => return ResultadoRedis::Error(
-                    "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
-                    .to_string(),
-                    ),
+                _ => {
+                    return ResultadoRedis::Error(
+                        "WRONGTYPE Operation against a key holding the wrong kind of value"
+                            .to_string(),
+                    )
+                }
             };
             bdd.guardar_valor(clave, TipoRedis::Set(a_agregar));
             ResultadoRedis::Int(cantidad_eliminada as isize)
         }
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
 
@@ -247,7 +273,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                "WRONGTYPE Operation against a key holding the wrong kind of value"
                     .to_string()
             ),
             resultado,
@@ -299,7 +325,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                "WRONGTYPE Operation against a key holding the wrong kind of value"
                     .to_string()
             ),
             resultado,
@@ -364,7 +390,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                "WRONGTYPE Operation against a key holding the wrong kind of value"
                     .to_string()
             ),
             resultado,
@@ -398,7 +424,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                "WRONGTYPE Operation against a key holding the wrong kind of value"
                     .to_string()
             ),
             resultado,
@@ -508,7 +534,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WrongTypeError error al obtener el set, valor guardado en la clave no es un Set"
+                "WRONGTYPE Operation against a key holding the wrong kind of value"
                     .to_string()
             ),
             resultado,

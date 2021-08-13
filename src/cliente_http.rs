@@ -163,9 +163,9 @@ impl TipoCliente for ClienteHTTP {
 
     fn enviar_resultado(&mut self, resultado: &ResultadoRedis) -> Result<(), RedisError> {
         self.mando = true;
-        
+
         let mensaje = format!("HTTP/1.1 200 OK\r\n\r\n{}", parsear_respuesta(resultado));
-        
+
         /*
         let mensaje = match resultado{
             ResultadoRedis::Error(_) => format!("HTTP/1.1 200 OK\r\n\r\n{}","HELP"),
