@@ -46,13 +46,11 @@ fn subscribe(
     cliente: Cliente,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-    let mut resultado = ResultadoRedis::Int(0);
-
     while let Some(clave) = comando.get_parametro() {
         let mut canal = match bdd.lock() {
             Ok(bdd) => match bdd.obtener_valor(&clave) {
                 Some(TipoRedis::Canal(c)) => c.clone(),
-                None => Canal::new(),
+                None => Canal::new(clave.clone()),
                 _ => {
                     return ResultadoRedis::Error(
                         "WRONGTYPE Operation against a key holding the wrong kind of value"
@@ -69,9 +67,8 @@ fn subscribe(
             Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Canal(canal)),
             Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
         }
-        resultado = ResultadoRedis::Int(1);
     }
-    resultado
+    ResultadoRedis::Vacio
 }
 
 fn unsubscribe(
@@ -79,8 +76,6 @@ fn unsubscribe(
     cliente: Cliente,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-    let mut resultado = ResultadoRedis::Int(0);
-
     while let Some(clave) = comando.get_parametro() {
         let mut canal = match bdd.lock() {
             Ok(bdd) => match bdd.obtener_valor(&clave) {
@@ -101,9 +96,8 @@ fn unsubscribe(
             Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Canal(canal)),
             Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
         }
-        resultado = ResultadoRedis::Int(1);
     }
-    resultado
+    ResultadoRedis::Vacio
 }
 
 fn publish(

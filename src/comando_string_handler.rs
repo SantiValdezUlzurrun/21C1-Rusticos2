@@ -94,7 +94,7 @@ fn set(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
     };
     if parametros.len() == 1 {
         return ResultadoRedis::Error(
-            "ERR wrong number of arguments for 'set' command".to_string(),
+            "ERR wrong number of arguments for 'set' command".to_string()
         );
     }
     match bdd.lock() {
