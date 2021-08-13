@@ -1,32 +1,60 @@
 <html>
     <head>
-       <title>Probar Redis</title>
+       <title>Server Redis</title>
     </head>
     <body>
     <div id = 'header'> <FONT FACE="monospace" WEIGHT= bold SIZE=6 COLOR= #262626> Redis REPL By 2Rusticos</FONT></div>
-    <div id = 'log'></div>
+    <div id = 'log'>
+      <div id = 'discleimer'>
+        <p> Bienvenido!! Esta es la pagina web interactiva del servidor redis que disenamos para Taller de Programacion de FIUBA.</p>
+        <p> Los comando disponibles para esta verision son:</p>
+        <p> COPY,DEL,EXISTS,RENAME,EXPIRE,EXPIREAT,PERSIST,TTL,TOUCH,KEYS,SORT,TYPE,LINDEX,LPOP,RPOP,
+            LPUSH,LPUSHX,RPUSH,RPUSHX,LRANGE,LREM,LSET,LLEN,SADD,SCARD,SISMEMBER,SMEMBERS,SREM,GET,SET,
+            APPEND,STRLEN,INCRBY,DECRBY,MGET,MSET,GETSET,GETDEL,FLUSHDB,DBSIZE,CONFIG,INFO,PING
+        </p>
+      </div>
+    </div>
     <div id = 'comando'>
-      <input id="input" type="text" placeholder= '> Comando'>
+      <input id="input" placeholder= '> Comando'>
       <button id="boton-envio" onclick="addcode()"> Enviar </button>
     </div>
       
   
     <script>
+      var input = document.getElementById("input");
+      input.addEventListener("keyup", function(event) {
+        if (event.keyCode === 13) {
+          event.preventDefault();
+          document.getElementById("boton-envio").click();
+        }
+      });
+      
+
       function addcode(){
         var str = document.getElementById("input").value;
         var xhr = new XMLHttpRequest();
-        
+
         mostrar("> " + str,"#595540");
 
-        if(pantalla_llena()){
-          eleminar_comando_mas_viejo()
-        }
         xhr.onload = function () {
           // do something to response
             if ( xhr.readyState == 4 &&  xhr.status == 200) {            
-            mostrar(this.responseText,"#000")
+              if (this.responseText != "HELP") {
+                mostrar(this.responseText,"#000")                
+              } else {
+                var str = '(error) No es un comando conocido. Los comandos implementados son : COPY,DEL,EXISTS,RENAME,EXPIRE,EXPIREAT,PERSIST,TTL,TOUCH,KEYS,SORT,TYPE,LINDEX,LPOP,RPOP,LPUSH,LPUSHX,RPUSH,RPUSHX,LRANGE,LREM,\nLSET,LLEN,SADD,SCARD,SISMEMBER,SMEMBERS,SREM,GET,SET,APPEND,STRLEN,INCRBY,DECRBY,MGET,MSET,GETSET,GETDEL,FLUSHDB,DBSIZE,CONFIG,INFO,PING';
+                mostrar(str,"#000")
+              }
+
+              
             }
+          var element = document.getElementById("log");
+          element.scrollTop = element.scrollHeight;
         };
+
+        
+
+
         xhr.open('POST', '/');
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
         xhr.setRequestHeader('Accept', 'text/plain');
@@ -51,7 +79,6 @@
     </script>
 
     <style>
-
       body{
         background-color: #262626;
       }
@@ -61,12 +88,25 @@
         background-color:#ffefd5;
         border:5px solid #595540;
         margin:auto;
+        overflow-y: scroll;
         font-family:"monospace";
         font-weight: bold;
         font-size:0.95em;
       }
+      #discleimer{
+        width:96%;
+        height:25%;
+        background-color:#262626;
+        border:15px solid #ffefd5;
+        margin:auto;
+        font-family:"monospace";
+        text-align: center;
+        color: #cc8139;
+        font-weight: bold;
+        font-size:0.95em;
+      }
       #comando{
-        width:50%;
+        width:60%;
         height:5.5%;
         background-color:#595540;
         margin:auto;
@@ -87,7 +127,6 @@
       #boton-envio{
         width:9%;
         height:85%;
-        
         background-color:#cc8139;
         color: #262626;
         font-family:monospace;
