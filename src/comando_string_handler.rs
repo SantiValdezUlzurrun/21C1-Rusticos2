@@ -79,6 +79,9 @@ fn set(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
             return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
         }
     };
+    if parametros.len() == 1 {
+        return ResultadoRedis::Error("Error al obtener clave".to_string())
+    }
     match bdd.lock() {
         Ok(mut bdd) => {
             if parametros.contains(&"EX".to_string()) {
