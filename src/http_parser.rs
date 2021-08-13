@@ -56,6 +56,7 @@ pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
         ),
         ResultadoRedis::Nil => "(nil)".to_string(),
         ResultadoRedis::Error(e) => format!("(error) {}", e),
+        ResultadoRedis::Vacio => String::new(),
     }
 }
 

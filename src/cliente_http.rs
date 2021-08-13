@@ -174,6 +174,11 @@ impl TipoCliente for ClienteHTTP {
     fn obtener_token(&self) -> Token {
         self.id
     }
+
+
+    fn notificar_subscripcion(&mut self, _canal: String) {}
+    fn publicar(&mut self, _canal: String, _mensaje: String) -> Result<(), RedisError> {Ok(())}
+    fn notificar_desubscripcion(&mut self, _canal: String) {}
 }
 
 impl Clone for ClienteHTTP {

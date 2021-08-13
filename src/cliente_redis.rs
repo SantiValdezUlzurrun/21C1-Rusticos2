@@ -12,6 +12,7 @@ use std::net::TcpStream;
 
 pub struct ClienteRedis {
     id: Token,
+    canales: usize,
     timeout: Option<Duration>,
     ultimo_mensaje: Instant,
     socket: Option<TcpStream>,
@@ -26,6 +27,7 @@ impl ClienteRedis {
 
         ClienteRedis {
             id,
+            canales: 0,
             timeout: duracion,
             ultimo_mensaje: Instant::now(),
             socket: Some(stream),
@@ -123,12 +125,27 @@ impl TipoCliente for ClienteRedis {
     fn obtener_token(&self) -> Token {
         self.id
     }
+
+    fn notificar_subscripcion(&mut self, canal: String) {
+        self.canales += 1;
+        self.enviar_mensaje(format!("*3\r\n$9\r\nsubscribe\r\n${}\r\n{}\r\n:{}\r\n", canal.len(), canal, self.canales));
+    }
+
+    fn publicar(&mut self,canal: String, mensaje: String) -> Result<(), RedisError> {
+        self.enviar_mensaje(format!("*3\r\n$7\r\nmessage\r\n${}\r\n{}\r\n${}\r\n{}\r\n", canal.len(), canal, mensaje.len(), mensaje))
+    }
+
+    fn notificar_desubscripcion(&mut self, canal: String) {
+        self.canales -= 1;
+        self.enviar_mensaje(format!("*3\r\n$11\r\nunsubscribe\r\n${}\r\n{}\r\n:{}\r\n", canal.len(), canal, self.canales));
+    }
 }
 
 impl Clone for ClienteRedis {
     fn clone(&self) -> Self {
         ClienteRedis {
             id: self.id,
+            canales: self.canales,
             timeout: self.timeout,
             ultimo_mensaje: self.ultimo_mensaje,
             socket: self.obtener_socket(),

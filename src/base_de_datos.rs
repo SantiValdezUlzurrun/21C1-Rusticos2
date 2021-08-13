@@ -22,6 +22,7 @@ pub enum ResultadoRedis {
     Vector(Vec<ResultadoRedis>),
     Nil,
     Error(String),
+    Vacio,
 }
 
 #[derive(Debug, PartialEq, Clone)]
