@@ -59,7 +59,7 @@ fn flushdb(
 ) -> ResultadoRedis {
     match bdd.lock() {
         Ok(mut b) => b.borrar_claves(),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     ResultadoRedis::StrSimple("OK".to_string())
 }
@@ -71,7 +71,7 @@ fn dbsize(
 ) -> ResultadoRedis {
     let cantidad = match bdd.lock() {
         Ok(b) => b.cantidad_claves(),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     ResultadoRedis::Int(cantidad as isize)
 }
@@ -83,13 +83,13 @@ fn fconfig(
 ) -> ResultadoRedis {
     let parametro = match comando.get_parametro() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
+        None => return ResultadoRedis::Error("ERR wrong number of arguments for fconfig command".to_string()),
     };
 
     match parametro.as_str() {
         "GET" => config_get(comando, bdd, config),
         "SET" => config_set(comando, bdd, config),
-        _ => ResultadoRedis::Error("Opcion de config no encontrada".to_string()),
+        _ => ResultadoRedis::Error("ERR Opcion config not found".to_string()),
     }
 }
 
@@ -100,12 +100,12 @@ fn config_get(
 ) -> ResultadoRedis {
     let parametro = match comando.get_parametro() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
+        None => return ResultadoRedis::Error("ERR wrong number of arguments for config_set command".to_string()),
     };
 
     let valores = match config.lock() {
         Ok(c) => c.get(&parametro),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la configuracion".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing config".to_string()),
     };
 
     ResultadoRedis::Vector(
@@ -123,12 +123,12 @@ fn config_set(
 ) -> ResultadoRedis {
     let (parametro, valor) = match (comando.get_parametro(), comando.get_parametro()) {
         (Some(p), Some(v)) => (p, v),
-        _ => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
+        _ => return ResultadoRedis::Error("ERR wrong number of arguments for config_get command".to_string()),
     };
 
     match config.lock() {
         Ok(mut c) => c.set(parametro, valor),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la configuracion".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing config".to_string()),
     };
 
     ResultadoRedis::StrSimple("Ok".to_string())
@@ -145,7 +145,7 @@ fn info(
             v.append(&mut b.info());
             v
         }
-        _ => return ResultadoRedis::Error("Error al acceder a la informacion".to_string()),
+        _ => return ResultadoRedis::Error("ERR when accessing info".to_string()),
     };
 
     ResultadoRedis::Vector(
