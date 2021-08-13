@@ -26,7 +26,7 @@ impl ComandoHandler for ComandoNuloHandler {
 
 fn comando_nulo(comando: &mut ComandoInfo, _bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     ResultadoRedis::Error(format!(
-        "ComandoError el comando '{}' no existe",
+        "ComandoError '{}' no existe",
         comando.descripcion()
     ))
 }
