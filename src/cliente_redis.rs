@@ -12,6 +12,7 @@ use std::net::TcpStream;
 
 pub struct ClienteRedis {
     id: Token,
+    canales: usize,
     timeout: Option<Duration>,
     ultimo_mensaje: Instant,
     socket: Option<TcpStream>,
@@ -26,6 +27,7 @@ impl ClienteRedis {
 
         ClienteRedis {
             id,
+            canales: 0,
             timeout: duracion,
             ultimo_mensaje: Instant::now(),
             socket: Some(stream),
@@ -133,6 +135,7 @@ impl Clone for ClienteRedis {
     fn clone(&self) -> Self {
         ClienteRedis {
             id: self.id,
+            canales: self.canales,
             timeout: self.timeout,
             ultimo_mensaje: self.ultimo_mensaje,
             socket: self.obtener_socket(),

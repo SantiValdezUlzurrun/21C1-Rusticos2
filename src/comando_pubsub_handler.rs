@@ -46,13 +46,11 @@ fn subscribe(
     cliente: Cliente,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-    let mut resultado = ResultadoRedis::Int(0);
-
     while let Some(clave) = comando.get_parametro() {
         let mut canal = match bdd.lock() {
             Ok(bdd) => match bdd.obtener_valor(&clave) {
                 Some(TipoRedis::Canal(c)) => c.clone(),
-                None => Canal::new(),
+                None => Canal::new(clave.clone()),
                 _ => {
                     return ResultadoRedis::Error(
                         "WrongType tipo de dato no es un canal".to_string(),
@@ -72,9 +70,8 @@ fn subscribe(
                 return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
             }
         }
-        resultado = ResultadoRedis::Int(1);
     }
-    resultado
+    ResultadoRedis::Vacio
 }
 
 fn unsubscribe(
@@ -82,8 +79,6 @@ fn unsubscribe(
     cliente: Cliente,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-    let mut resultado = ResultadoRedis::Int(0);
-
     while let Some(clave) = comando.get_parametro() {
         let mut canal = match bdd.lock() {
             Ok(bdd) => match bdd.obtener_valor(&clave) {
@@ -107,9 +102,8 @@ fn unsubscribe(
                 return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
             }
         }
-        resultado = ResultadoRedis::Int(1);
     }
-    resultado
+    ResultadoRedis::Vacio
 }
 
 fn publish(

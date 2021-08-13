@@ -69,6 +69,7 @@ pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
         ),
         ResultadoRedis::Nil => "$-1\r\n".to_string(),
         ResultadoRedis::Error(e) => format!("-{}\r\n", e),
+        ResultadoRedis::Vacio => String::new(),
     }
 }
 

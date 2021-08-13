@@ -31,7 +31,7 @@ impl LogHandler {
         LogHandler {
             ruta,
             receptor,
-            canal: Canal::new(),
+            canal: Canal::new("monitor".to_string()),
             tipo: set_verbose(verbose),
         }
     }
