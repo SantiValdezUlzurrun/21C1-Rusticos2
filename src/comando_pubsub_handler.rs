@@ -55,12 +55,12 @@ fn subscribe(
                 None => Canal::new(),
                 _ => {
                     return ResultadoRedis::Error(
-                        "WrongType tipo de dato no es un canal".to_string(),
+                        "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
                     )
                 }
             },
             Err(_) => {
-                return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
+                return ResultadoRedis::Error("ERR when accessing the database".to_string())
             }
         };
 
@@ -69,7 +69,7 @@ fn subscribe(
         match bdd.lock() {
             Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Canal(canal)),
             Err(_) => {
-                return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
+                return ResultadoRedis::Error("ERR when accessing the database".to_string())
             }
         }
         resultado = ResultadoRedis::Int(1);
@@ -90,12 +90,12 @@ fn unsubscribe(
                 Some(TipoRedis::Canal(c)) => c.clone(),
                 _ => {
                     return ResultadoRedis::Error(
-                        "WrongType tipo de dato no es un canal".to_string(),
+                        "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
                     )
                 }
             },
             Err(_) => {
-                return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
+                return ResultadoRedis::Error("ERR when accessing the database".to_string())
             }
         };
 
@@ -104,7 +104,7 @@ fn unsubscribe(
         match bdd.lock() {
             Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Canal(canal)),
             Err(_) => {
-                return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
+                return ResultadoRedis::Error("ERR when accessing the database".to_string())
             }
         }
         resultado = ResultadoRedis::Int(1);
@@ -125,16 +125,16 @@ fn publish(
     let mensaje = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error("ERR wrong number of arguments for 'publish' command".to_string())
         }
     };
 
     let mut canal = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Canal(c)) => c.clone(),
-            _ => return ResultadoRedis::Error("WrongType tipo de dato no es un canal".to_string()),
+            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     ResultadoRedis::Int(canal.publicar(mensaje) as isize)
 }
@@ -146,13 +146,13 @@ fn pubsub(
 ) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        _ => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        _ => return ResultadoRedis::Error("ERR wrong number of arguments for 'pubsub' command".to_string()),
     };
 
     match clave.as_str() {
         "CHANNELS" => channels(comando, _cliente, bdd),
         "NUMSUB" => numsub(comando, _cliente, bdd),
-        _ => ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        _ => ResultadoRedis::Error("ERR wrong number of arguments for 'pubsub' command".to_string()),
     }
 }
 
@@ -164,12 +164,12 @@ fn channels(
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error("ERR wrong number of arguments for 'channels' command".to_string())
         }
     };
     let canales: Vec<String> = match bdd.lock() {
         Ok(bdd) => bdd.canales_activos(&parametro),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     ResultadoRedis::Vector(
         canales
@@ -191,12 +191,12 @@ fn numsub(
                 Some(TipoRedis::Canal(c)) => c.clone(),
                 _ => {
                     return ResultadoRedis::Error(
-                        "WrongType tipo de dato no es un canal".to_string(),
+                        "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
                     )
                 }
             },
             Err(_) => {
-                return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
+                return ResultadoRedis::Error("ERR when accessing the database".to_string())
             }
         };
 
