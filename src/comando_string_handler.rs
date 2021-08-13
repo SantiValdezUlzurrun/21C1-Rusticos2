@@ -214,13 +214,13 @@ fn getdel(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
     };
     let bdd_clon = Arc::clone(&bdd);
     match get(comando, bdd_clon) {
-        ResultadoRedis::Error(s) => return ResultadoRedis::Error(s),
+        ResultadoRedis::Error(s) => ResultadoRedis::Error(s),
         ResultadoRedis::BulkStr(valor) => match bdd.lock() {
             Ok(mut bdd) => {
                 bdd.eliminar_clave(&clave);
-                return ResultadoRedis::BulkStr(valor);
+                ResultadoRedis::BulkStr(valor)
             }
-            Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
+            Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string())
         },
         _ => ResultadoRedis::Nil,
     }

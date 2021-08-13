@@ -83,7 +83,11 @@ fn fconfig(
 ) -> ResultadoRedis {
     let parametro = match comando.get_parametro() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for fconfig command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for fconfig command".to_string(),
+            )
+        }
     };
 
     match parametro.as_str() {
@@ -100,7 +104,11 @@ fn config_get(
 ) -> ResultadoRedis {
     let parametro = match comando.get_parametro() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for config_set command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for config_set command".to_string(),
+            )
+        }
     };
 
     let valores = match config.lock() {
@@ -123,7 +131,11 @@ fn config_set(
 ) -> ResultadoRedis {
     let (parametro, valor) = match (comando.get_parametro(), comando.get_parametro()) {
         (Some(p), Some(v)) => (p, v),
-        _ => return ResultadoRedis::Error("ERR wrong number of arguments for config_get command".to_string()),
+        _ => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for config_get command".to_string(),
+            )
+        }
     };
 
     match config.lock() {

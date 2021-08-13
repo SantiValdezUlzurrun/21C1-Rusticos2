@@ -49,13 +49,19 @@ pub fn es_comando_key(comando: &str) -> bool {
 fn copy(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'copy' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'copy' command".to_string(),
+            )
+        }
     };
 
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ERR wrong number of arguments for 'copy' command".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'copy' command".to_string(),
+            )
         }
     };
     match bdd.lock() {
@@ -70,13 +76,15 @@ fn copy(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
 fn rename(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'rename' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'rename' command".to_string(),
+            )
+        }
     };
     let clon = Arc::clone(&bdd);
     match copy(comando, bdd) {
-        ResultadoRedis::Error(_) => {
-            ResultadoRedis::Error("ERR no such key".to_string())
-        }
+        ResultadoRedis::Error(_) => ResultadoRedis::Error("ERR no such key".to_string()),
         _ => {
             let vector = vec!["rename".to_string(), clave];
             let mut comando = ComandoInfo::new(vector);
@@ -89,7 +97,11 @@ fn rename(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
 fn tipo(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'type' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'type' command".to_string(),
+            )
+        }
     };
     match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
@@ -117,9 +129,7 @@ fn recorrer_y_ejecutar(
                     claves_eliminadas += 1;
                 }
             }
-            Err(_) => {
-                return ResultadoRedis::Error("ERR when accessing the database".to_string())
-            }
+            Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
         };
     }
     ResultadoRedis::Int(claves_eliminadas)
@@ -143,16 +153,26 @@ fn exists(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
 fn expire(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'expire' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'expire' command".to_string(),
+            )
+        }
     };
 
     let parametro: u64 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(t) => t,
-            Err(_) => return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
         None => {
-            return ResultadoRedis::Error("ERR wrong number of arguments for 'expire' command".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'expire' command".to_string(),
+            )
         }
     };
     match bdd.lock() {
@@ -166,16 +186,26 @@ fn expire(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
 fn expireat(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'expireat' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'expireat' command".to_string(),
+            )
+        }
     };
 
     let parametro: u64 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(t) => t,
-            Err(_) => return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
         None => {
-            return ResultadoRedis::Error("ERR wrong number of arguments for 'expireat' command".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'expireat' command".to_string(),
+            )
         }
     };
 
@@ -183,7 +213,9 @@ fn expireat(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
     let tiempo_a_esperar = match tiempo_desde_epoch.duration_since(SystemTime::now()) {
         Ok(d) => d,
         Err(_) => {
-            return ResultadoRedis::Error("TimeError the time since epoch has already happened".to_string())
+            return ResultadoRedis::Error(
+                "TimeError the time since epoch has already happened".to_string(),
+            )
         }
     };
     match bdd.lock() {
@@ -197,7 +229,11 @@ fn expireat(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
 fn persist(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'persist' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'persist' command".to_string(),
+            )
+        }
     };
     match bdd.lock() {
         Ok(mut bdd) => ResultadoRedis::Int(bdd.actualizar_valor_sin_expiracion(clave) as isize),
@@ -208,7 +244,11 @@ fn persist(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultado
 fn ttl(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'ttl' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'ttl' command".to_string(),
+            )
+        }
     };
     match bdd.lock() {
         Ok(bdd) => ResultadoRedis::Int(bdd.obtener_expiracion(&clave) as isize),
@@ -233,7 +273,9 @@ fn keys(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
     let re = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ERR wrong number of arguments for 'keys' command".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'keys' command".to_string(),
+            )
         }
     };
 
@@ -369,9 +411,7 @@ fn sort_configuracion_lista_ordenada(
                 bdd.guardar_valor(clave.to_string(), TipoRedis::Lista(valores));
                 return ResultadoRedis::StrSimple(tamanio.to_string());
             }
-            Err(_) => {
-                return ResultadoRedis::Error("ERR when accessing the database".to_string())
-            }
+            Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
         }
     }
     ResultadoRedis::Vector(
@@ -406,9 +446,7 @@ fn sort_elemento_con_pesos_externos(
     }
     let mut tuplas = match obetener_tupla_valor_peso(valores, pesos, bdd.clone()) {
         Some(t) => t,
-        None => {
-            return ResultadoRedis::Error("ERR syntax error".to_string())
-        }
+        None => return ResultadoRedis::Error("ERR syntax error".to_string()),
     };
 
     tuplas.sort_by(|a, b| a.1.cmp(&b.1));
@@ -416,16 +454,12 @@ fn sort_elemento_con_pesos_externos(
     if parametros.contains(&"GET".to_string()) {
         let patron_obj = match parametros.rsplit(|p| p == &"GET".to_string()).next() {
             Some(c) => &c[0],
-            None => {
-                return ResultadoRedis::Error("ERR syntax error".to_string())
-            }
+            None => return ResultadoRedis::Error("ERR syntax error".to_string()),
         };
 
         let objetos = match bdd.lock() {
             Ok(bdd) => bdd.claves(patron_obj),
-            Err(_) => {
-                return ResultadoRedis::Error("ERR when accessing the database".to_string())
-            }
+            Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
         };
         let mut resultado: Vec<ResultadoRedis> = vec![];
         let mut pusheado = false;
@@ -465,7 +499,11 @@ fn sort_elemento_con_pesos_externos(
 fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let parametros = match comando.get_parametros() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'sort' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'sort' command".to_string(),
+            )
+        }
     };
     let valores = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&parametros[0]) {
@@ -475,7 +513,11 @@ fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
                 .map(|x| x.to_string())
                 .collect::<Vec<String>>(),
             None => return ResultadoRedis::Vector(vec![]),
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the databases".to_string()),
     };

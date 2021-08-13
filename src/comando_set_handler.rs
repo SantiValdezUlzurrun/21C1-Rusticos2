@@ -273,8 +273,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WRONGTYPE Operation against a key holding the wrong kind of value"
-                    .to_string()
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
             ),
             resultado,
         );
@@ -325,8 +324,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WRONGTYPE Operation against a key holding the wrong kind of value"
-                    .to_string()
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
             ),
             resultado,
         );
@@ -390,8 +388,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WRONGTYPE Operation against a key holding the wrong kind of value"
-                    .to_string()
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
             ),
             resultado,
         );
@@ -424,8 +421,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WRONGTYPE Operation against a key holding the wrong kind of value"
-                    .to_string()
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
             ),
             resultado,
         );
@@ -534,8 +530,7 @@ mod tests {
 
         assert_eq!(
             ResultadoRedis::Error(
-                "WRONGTYPE Operation against a key holding the wrong kind of value"
-                    .to_string()
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
             ),
             resultado,
         );

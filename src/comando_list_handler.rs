@@ -47,26 +47,38 @@ pub fn es_comando_list(comando: &str) -> bool {
 pub fn lindex(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'lindex' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lindex' command".to_string(),
+            )
+        }
     };
 
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ERR wrong number of arguments for 'lindex' command".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lindex' command".to_string(),
+            )
         }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
 
     let indice: i32 = match parametro.parse() {
         Ok(v) => v,
-        Err(_) => return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string()),
+        Err(_) => {
+            return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string())
+        }
     };
     let tamanio = lista.len() as i32;
 
@@ -82,14 +94,22 @@ pub fn lindex(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Result
 pub fn llen(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'llen' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'llen' command".to_string(),
+            )
+        }
     };
 
     ResultadoRedis::Int(match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.len(),
             None => 0,
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     } as isize)
@@ -106,12 +126,20 @@ pub fn rpop(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -
 fn pop(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>, reversed: bool) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'pop' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'pop' command".to_string(),
+            )
+        }
     };
     let indice = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(i) => i,
-            Err(_) => return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
         None => 1,
     };
@@ -119,7 +147,11 @@ fn pop(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>, reversed: bool) 
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Nil,
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
@@ -181,13 +213,21 @@ fn push(
 pub fn lpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'lpush' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lpush' command".to_string(),
+            )
+        }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => Vec::new(),
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
@@ -198,13 +238,21 @@ pub fn lpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resulta
 pub fn lpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'lpushx' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lpushx' command".to_string(),
+            )
+        }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Int(0),
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
@@ -214,13 +262,21 @@ pub fn lpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Result
 pub fn rpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'rpush' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'rpush' command".to_string(),
+            )
+        }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => Vec::new(),
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
@@ -230,13 +286,21 @@ pub fn rpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resulta
 pub fn rpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'rpushx' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'rpushx' command".to_string(),
+            )
+        }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Int(0),
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
@@ -246,28 +310,52 @@ pub fn rpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Result
 pub fn lrange(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'lrange' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrange' command".to_string(),
+            )
+        }
     };
     let inicio: i32 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(i) => i,
-            Err(_) => return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'lrange' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrange' command".to_string(),
+            )
+        }
     };
     let fin: i32 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(i) => i,
-            Err(_) => return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'lrange' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrange' command".to_string(),
+            )
+        }
     };
 
     let lista = match base_de_datos.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Vector(vec![]),
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
@@ -333,19 +421,33 @@ fn esta_en_rango_lista(valor: i32, limite: i32) -> bool {
 pub fn lrem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'lrem' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrem' command".to_string(),
+            )
+        }
     };
     let indice: i32 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(i) => i,
-            Err(_) => return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'lrem' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrem' command".to_string(),
+            )
+        }
     };
     let a_eliminar = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ERR wrong number of arguments for 'lrem' command".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrem' command".to_string(),
+            )
         }
     };
 
@@ -353,7 +455,11 @@ pub fn lrem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Int(0),
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
@@ -393,25 +499,35 @@ pub fn lrem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
 pub fn lset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ERR wrong number of arguments for 'lset' command".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lset' command".to_string(),
+            )
+        }
     };
 
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ERR wrong number of arguments for 'lset' command".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lset' command".to_string(),
+            )
         }
     };
 
     let indice: i32 = match parametro.parse() {
         Ok(v) => v,
-        Err(_) => return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string()),
+        Err(_) => {
+            return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string())
+        }
     };
 
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ERR wrong number of arguments for 'lset' command".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lset' command".to_string(),
+            )
         }
     };
 
@@ -419,7 +535,11 @@ pub fn lset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => Vec::new(),
-            _ => return ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
@@ -528,7 +648,9 @@ mod tests {
         let mut comando = ComandoInfo::new(vec!["llen".to_string(), "milista".to_string()]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             llen(&mut comando, ptr)
         );
     }
@@ -593,7 +715,9 @@ mod tests {
         let mut comando = ComandoInfo::new(vec!["lpop".to_string(), "clave".to_string()]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lpop(&mut comando, ptr)
         );
     }
@@ -655,7 +779,9 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lpush(&mut comando, ptr)
         );
     }
@@ -756,7 +882,9 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lpushx(&mut comando, ptr)
         );
     }
@@ -833,7 +961,9 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lrange(&mut comando, ptr)
         );
     }
@@ -965,7 +1095,9 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lrem(&mut comando, ptr)
         );
     }
@@ -1070,7 +1202,9 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lset(&mut comando, ptr)
         );
     }
@@ -1141,7 +1275,9 @@ mod tests {
         let mut comando = ComandoInfo::new(vec!["rpop".to_string(), "clave".to_string()]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             rpop(&mut comando, ptr)
         );
     }
@@ -1203,7 +1339,9 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             rpush(&mut comando, ptr)
         );
     }
@@ -1304,7 +1442,9 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE Operation against a key holding the wrong kind of value".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             rpushx(&mut comando, ptr)
         );
     }
