@@ -18,9 +18,6 @@ pub trait TipoCliente: ClienteClone + ClienteDebug {
     fn esta_conectado(&self) -> bool;
     fn enviar_resultado(&mut self, resultado: &ResultadoRedis) -> Result<(), RedisError>;
     fn enviar_mensaje(&mut self, mensaje: String) -> Result<(), RedisError>;
-    fn notificar_subscripcion(&mut self, canal: String);
-    fn publicar(&mut self, canal: String, mensaje: String) -> Result<(), RedisError>;
-    fn notificar_desubscripcion(&mut self, canal: String);
     fn obtener_token(&self) -> Token;
 }
 

@@ -46,7 +46,6 @@ fn subscribe(
     cliente: Cliente,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-
     while let Some(clave) = comando.get_parametro() {
         let mut canal = match bdd.lock() {
             Ok(bdd) => match bdd.obtener_valor(&clave) {
@@ -80,7 +79,6 @@ fn unsubscribe(
     cliente: Cliente,
     bdd: Arc<Mutex<BaseDeDatos>>,
 ) -> ResultadoRedis {
-
     while let Some(clave) = comando.get_parametro() {
         let mut canal = match bdd.lock() {
             Ok(bdd) => match bdd.obtener_valor(&clave) {
