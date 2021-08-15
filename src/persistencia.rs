@@ -1,6 +1,6 @@
-use std::collections::HashSet;
 use crate::observer::Observer;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::BufRead;
@@ -164,11 +164,7 @@ fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>, time: Option<Du
 }
 
 fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) -> Result<()> {
-    let mut archivo = match OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(archivo)
-    {
+    let mut archivo = match OpenOptions::new().write(true).create(true).open(archivo) {
         Ok(a) => a,
         Err(e) => return Err(e),
     };
@@ -181,9 +177,7 @@ fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-
 pub fn levantar_tabla(archivo_persistencia: String) -> HashMap<String, Valor> {
-
     let mut hashmap = HashMap::<String, Valor>::new();
 
     let archivo = match File::open(archivo_persistencia) {

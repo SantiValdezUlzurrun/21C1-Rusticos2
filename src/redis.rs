@@ -1,8 +1,3 @@
-use crate::persistencia::levantar_tabla;
-use crate::observer::Observable;
-use crate::persistencia::Persistidor;
-use crate::persistencia::MensajePersistencia;
-use crate::persistencia::PersistidorHandler;
 use crate::base_de_datos::{BaseDeDatos, ResultadoRedis};
 use crate::cliente::crear_cliente;
 use crate::cliente::{Cliente, Token};
@@ -10,6 +5,11 @@ use crate::comando::crear_comando_handler;
 use crate::comando_info::ComandoInfo;
 use crate::log_handler::Mensaje;
 use crate::log_handler::{LogHandler, Logger};
+use crate::observer::Observable;
+use crate::persistencia::levantar_tabla;
+use crate::persistencia::MensajePersistencia;
+use crate::persistencia::Persistidor;
+use crate::persistencia::PersistidorHandler;
 use crate::redis_error::RedisError;
 use crate::Config;
 
@@ -36,7 +36,8 @@ impl Redis {
     pub fn new(mut config: Config) -> Self {
         let (tx_log, rx_log) = channel();
 
-        let mut log_handler: LogHandler = LogHandler::new(config.logfile(), rx_log, config.verbose());
+        let mut log_handler: LogHandler =
+            LogHandler::new(config.logfile(), rx_log, config.verbose());
 
         let hilo_log = thread::spawn(move || {
             log_handler.logear();

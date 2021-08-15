@@ -16,12 +16,12 @@ mod comando_string_handler;
 mod config;
 mod http_parser;
 mod log_handler;
+mod observer;
 mod parser;
 mod persistencia;
 mod redis;
 mod redis_error;
 mod valor;
-mod observer;
 
 use std::env;
 

@@ -202,7 +202,6 @@ impl BaseDeDatos {
 
     #[allow(dead_code)]
     pub fn new() -> Self {
-
         BaseDeDatos {
             hashmap: HashMap::<String, Valor>::new(),
             observadores: vec![],
@@ -210,20 +209,18 @@ impl BaseDeDatos {
     }
 
     pub fn new_con(tabla_persistida: HashMap<String, Valor>) -> Self {
-
         BaseDeDatos {
             hashmap: tabla_persistida,
             observadores: vec![],
         }
     }
-
 }
 
 impl Observable for BaseDeDatos {
-
     fn notificar_observadores(&self, bdd: HashMap<String, Valor>) {
-        self.observadores.iter()
-                         .for_each(|o| o.actualizar(bdd.clone()))
+        self.observadores
+            .iter()
+            .for_each(|o| o.actualizar(bdd.clone()))
     }
 
     fn agregar_observador(&mut self, o: Box<dyn Observer + Send>) {

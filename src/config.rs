@@ -1,6 +1,6 @@
-use crate::persistencia::Persistidor;
 use crate::cliente::Cliente;
 use crate::log_handler::Logger;
+use crate::persistencia::Persistidor;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
@@ -114,11 +114,7 @@ impl Config {
         self.monitorear_ultimo_cliente = true;
     }
 
-    pub fn actualizar(
-        &mut self,
-        logger: &Logger,
-        cliente: Cliente,
-    ) {
+    pub fn actualizar(&mut self, logger: &Logger, cliente: Cliente) {
         self.actualizar_log(logger, cliente);
         self.actualizar_persistencia();
     }
