@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use crate::observer::Observer;
 use std::collections::HashMap;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -5,6 +7,8 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Result;
 use std::io::Write;
+use std::iter::FromIterator;
+
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::{Duration, Instant};
 
@@ -70,6 +74,7 @@ impl PersistidorHandler {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Persistidor {
     persistidor: Sender<MensajePersistencia>,
 }
@@ -93,6 +98,12 @@ impl Persistidor {
             .send(MensajePersistencia::ArchivoAPersistir(ruta_nueva))
             .is_ok()
         {}
+    }
+}
+
+impl Observer for Persistidor {
+    fn actualizar(&self, bdd: HashMap<String, Valor>) {
+        self.persistir(bdd);
     }
 }
 
@@ -155,9 +166,7 @@ fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>, time: Option<Du
 fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) -> Result<()> {
     let mut archivo = match OpenOptions::new()
         .write(true)
-        //.append(true)
-        //.create_new(true)
-        .truncate(true)
+        .create(true)
         .open(archivo)
     {
         Ok(a) => a,
@@ -172,20 +181,87 @@ fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-#[allow(dead_code)]
-fn cargar_en_vector(archivo: &str) -> Result<Vec<String>> {
-    let mut vector: Vec<String> = vec![];
-    let file = match File::open(archivo) {
-        Ok(a) => a,
-        Err(e) => return Err(e),
+
+pub fn levantar_tabla(archivo_persistencia: String) -> HashMap<String, Valor> {
+
+    let mut hashmap = HashMap::<String, Valor>::new();
+
+    let archivo = match File::open(archivo_persistencia) {
+        Ok(archivo) => archivo,
+        Err(_) => return hashmap,
     };
 
-    let reader = BufReader::new(file);
+    let reader = BufReader::new(archivo);
+    let mut lineas = reader.lines();
+    while let Some(Ok(line)) = lineas.next() {
+        if line.is_empty() {
+            continue;
+        }
+        let mut elemento: Vec<&str> = line.split(':').collect();
 
-    for linea in reader.lines().flatten() {
-        vector.push(linea);
+        if elemento.contains(&"STRING") {
+            let mut valor = Valor::no_expirable(TipoRedis::Str(elemento[2].to_string()));
+
+            if es_expirable(elemento.clone()) {
+                let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+                valor = Valor::expirable(TipoRedis::Str(elemento[2].to_string()), tiempo);
+            }
+            hashmap.insert(elemento[1].to_string(), valor);
+        } else if elemento.remove(0) == "LIST" {
+            let clave = elemento.remove(0).to_string();
+            let mut valor = Valor::no_expirable(TipoRedis::Lista(
+                elemento.iter().map(|x| x.to_string()).collect(),
+            ));
+
+            if es_expirable(elemento.clone()) {
+                let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+
+                valor = Valor::expirable(
+                    TipoRedis::Lista(elemento.iter().map(|x| x.to_string()).collect()),
+                    tiempo,
+                );
+            }
+            hashmap.insert(clave, valor);
+        } else {
+            elemento.remove(0);
+            let clave = elemento.remove(0).to_string();
+            let mut valor = Valor::no_expirable(TipoRedis::Set(HashSet::from_iter(
+                elemento
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            )));
+            if es_expirable(elemento.clone()) {
+                let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+
+                valor = Valor::expirable(
+                    TipoRedis::Set(HashSet::from_iter(
+                        elemento
+                            .iter()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<String>>(),
+                    )),
+                    tiempo,
+                );
+            }
+            hashmap.insert(clave, valor);
+        }
     }
-    Ok(vector)
+    hashmap
+}
+
+fn es_expirable(parametros: Vec<&str>) -> bool {
+    parametros.contains(&"EX")
+}
+
+fn obtener_tiempo_expiracion(parametros: Vec<&str>, support: &str) -> Option<u64> {
+    match parametros.rsplit(|p| p == &support.to_string()).next() {
+        Some(c) => match c[0].parse::<u64>() {
+            Ok(num) => Some(num),
+            Err(_) => None,
+        },
+        None => None,
+    }
 }
 
 #[cfg(test)]

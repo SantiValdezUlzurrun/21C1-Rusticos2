@@ -21,6 +21,7 @@ mod persistencia;
 mod redis;
 mod redis_error;
 mod valor;
+mod observer;
 
 use std::env;
 

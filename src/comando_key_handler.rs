@@ -543,7 +543,7 @@ mod tests {
 
     #[test]
     fn copy_copia_el_valor_de_una_clave_en_otra() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
 
         let ptr_arc = Arc::new(Mutex::new(data_base));
@@ -569,7 +569,7 @@ mod tests {
 
     #[test]
     fn copy_copiar_una_clave_que_no_existe_devuelve_un_error() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
         let ptr_arc = Arc::new(Mutex::new(data_base));
 
         let comando = vec![
@@ -583,7 +583,7 @@ mod tests {
 
     #[test]
     fn del_elimina_las_claves_guardadas_en_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -606,7 +606,7 @@ mod tests {
 
     #[test]
     fn del_trata_de_elimina_las_claves_que_no_estan_guardadas_en_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -629,7 +629,7 @@ mod tests {
 
     #[test]
     fn del_elimina_las_claves_repetidas_que_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -652,7 +652,7 @@ mod tests {
 
     #[test]
     fn existis_chequea_las_claves_guardadas_en_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -675,7 +675,7 @@ mod tests {
 
     #[test]
     fn existis_chequea_las_claves_repetidas_que_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -698,7 +698,7 @@ mod tests {
 
     #[test]
     fn rename_cambia_modifica_la_clave_pedida() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
 
         let ptr_arc = Arc::new(Mutex::new(data_base));
@@ -726,7 +726,7 @@ mod tests {
 
     #[test]
     fn tipo_devuelve_el_tipo_del_valor_almacenado_con_esa_clave() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("string".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("lista".to_string(), TipoRedis::Lista(Vec::new()));
         data_base.guardar_valor("set".to_string(), TipoRedis::Set(HashSet::new()));
@@ -767,7 +767,7 @@ mod tests {
     #[test]
     fn expire_cuando_se_crea_una_clave_no_expirable_y_se_la_pasa_a_volatil_esta_expira_correctamente(
     ) {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -789,7 +789,7 @@ mod tests {
 
     #[test]
     fn keys_si_se_ingresa_la_siguiente_re_el_resultado_es_el_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("hello".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("hallo".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("hillo".to_string(), TipoRedis::Str("valor".to_string()));
@@ -806,7 +806,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_numericos_en_una_lista() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -831,7 +831,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_alphanumerico_en_una_lista() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -862,7 +862,7 @@ mod tests {
 
     #[test]
     fn sort_devuelve_un_error_si_no_esta_el_parametro_alpha_en_una_lista_de_palabras() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -885,7 +885,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_si_esta_el_parametro_alpha_en_una_lista_de_palabras() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -917,7 +917,7 @@ mod tests {
     #[test]
     fn sort_ordena_los_elementos_en_orden_descendiente_en_una_lista_de_numeros_si_esta_la_clave_desc(
     ) {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -946,7 +946,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_el_rango_pedido() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -975,7 +975,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_otro_rango() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -1008,7 +1008,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_rango_uno() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -1038,7 +1038,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_rango_menos_uno_menos_diez() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -1071,7 +1071,7 @@ mod tests {
 
     #[test]
     fn sort_devuelve_una_lista_vacia_si_el_valor_no_existes() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
@@ -1085,7 +1085,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_con_pesos_externos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("peso_2".to_string(), TipoRedis::Str("2".to_string()));
         data_base.guardar_valor("peso_3".to_string(), TipoRedis::Str("3".to_string()));
         data_base.guardar_valor("peso_4".to_string(), TipoRedis::Str("4".to_string()));
@@ -1122,7 +1122,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_con_pesos_externos_faltantes() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("peso_3".to_string(), TipoRedis::Str("3".to_string()));
         data_base.guardar_valor("peso_4".to_string(), TipoRedis::Str("4".to_string()));
         data_base.guardar_valor("peso_5".to_string(), TipoRedis::Str("5".to_string()));
@@ -1158,7 +1158,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_con_todos_pesos_externos_faltantes() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -1190,7 +1190,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_y_devuelve_los_objetos_que_representan_las_ids() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("peso_1".to_string(), TipoRedis::Str("1".to_string()));
         data_base.guardar_valor("peso_2".to_string(), TipoRedis::Str("2".to_string()));
         data_base.guardar_valor("peso_3".to_string(), TipoRedis::Str("3".to_string()));
@@ -1245,7 +1245,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_por_pesos_externos_los_elementos_los_guarda_con_la_clave_dada() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("peso_1".to_string(), TipoRedis::Str("1".to_string()));
         data_base.guardar_valor("peso_2".to_string(), TipoRedis::Str("2".to_string()));
         data_base.guardar_valor("peso_3".to_string(), TipoRedis::Str("3".to_string()));
