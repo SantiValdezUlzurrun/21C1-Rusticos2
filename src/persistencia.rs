@@ -41,7 +41,7 @@ impl PersistidorHandler {
     ///
     /// * `archivo` - string donde se va a persistir la base de datos
     /// * `intervalo` - intervalo de tiempo a traves del cual se va a persistir
-    /// * `receptor` - Receiver de mensajes
+    /// * `receptor` - Receiver de mensajes asociado al channel del Persistidor
     pub fn new(archivo: String, intervalo: u64, receptor: Receiver<MensajePersistencia>) -> Self {
         PersistidorHandler {
             archivo,
@@ -103,7 +103,7 @@ impl Persistidor {
     ///
     /// # Argumentos
     ///
-    /// * `persistidor` - Sender de MensajePersistencia
+    /// * `persistidor` - Sender de MensajePersistencia asociado la channel de PersistidorHandler
     pub fn new(persistidor: Sender<MensajePersistencia>) -> Self {
         Persistidor { persistidor }
     }
