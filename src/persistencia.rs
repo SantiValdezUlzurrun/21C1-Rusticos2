@@ -201,7 +201,8 @@ pub fn levantar_tabla(archivo_persistencia: String) -> HashMap<String, Valor> {
                 valor = Valor::expirable(TipoRedis::Str(elemento[2].to_string()), tiempo);
             }
             hashmap.insert(elemento[1].to_string(), valor);
-        } else if elemento.remove(0) == "LIST" {
+        } else if elemento.contains(&"LIST") {
+            elemento.remove(0);
             let clave = elemento.remove(0).to_string();
             let mut valor = Valor::no_expirable(TipoRedis::Lista(
                 elemento.iter().map(|x| x.to_string()).collect(),
@@ -216,7 +217,7 @@ pub fn levantar_tabla(archivo_persistencia: String) -> HashMap<String, Valor> {
                 );
             }
             hashmap.insert(clave, valor);
-        } else {
+        } else if elemento.contains(&"SET") {
             elemento.remove(0);
             let clave = elemento.remove(0).to_string();
             let mut valor = Valor::no_expirable(TipoRedis::Set(HashSet::from_iter(
@@ -239,6 +240,8 @@ pub fn levantar_tabla(archivo_persistencia: String) -> HashMap<String, Valor> {
                 );
             }
             hashmap.insert(clave, valor);
+        } else {
+            continue;
         }
     }
     hashmap
