@@ -28,7 +28,6 @@ impl Config {
         mapa_config.insert("timeout".to_string(), "0".to_string());
         mapa_config.insert("dbfilename".to_string(), "dump.rb".to_string());
         mapa_config.insert("logfile".to_string(), "redis.log".to_string());
-
         Config {
             mapa_config,
             persistidor: None,
@@ -103,10 +102,10 @@ impl Config {
 
     pub fn info(&self) -> Vec<String> {
         let mut info = vec!["# Config".to_string(), "".to_string()];
-
         for (clave, valor) in &self.mapa_config {
             info.push(format!("{}:{}", clave, valor));
         }
+        info.push("".to_string());
         info
     }
 
@@ -155,9 +154,13 @@ pub fn obtener_configuracion(ruta_archivo: String) -> Result<Config, ArchivoErro
         mapa.insert(argumento[0].to_string(), argumento[1].to_string());
     }
 
-    Ok(Config {
-        mapa_config: mapa,
-        persistidor: None,
-        monitorear_ultimo_cliente: false,
-    })
+    if mapa.is_empty() {
+        Ok(Config::new())
+    } else {
+        Ok(Config {
+            mapa_config: mapa,
+            persistidor: None,
+            monitorear_ultimo_cliente: false,
+        })
+    }
 }

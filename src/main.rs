@@ -32,7 +32,7 @@ fn main() {
     let config = match env::args().last() {
         Some(ruta) => match obtener_configuracion(ruta) {
             Ok(config) => config,
-            Err(_) => return,
+            Err(_) => Config::new(),
         },
         None => Config::new(),
     };
