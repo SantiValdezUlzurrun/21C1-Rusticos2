@@ -213,7 +213,7 @@ mod tests {
     //sadd
     #[test]
     fn sadd_cuando_se_envia_una_clave_que_no_esta_esta_se_crea_y_se_almacena_correctamente() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let vector = vec![
             "SADD".to_string(),
             "miClave".to_string(),
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn sadd_cuando_se_envia_un_valor_que_esta_repetido_esta_no_se_almacena() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let vector = vec![
             "SADD".to_string(),
             "miClave".to_string(),
@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn sadd_cuando_se_envia_una_clave_invalida_se_envia_el_error_adecuado() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor(
             "miClave".to_string(),
             TipoRedis::Str("unString".to_string()),
@@ -282,7 +282,7 @@ mod tests {
     //scard
     #[test]
     fn scard_cuando_se_envia_una_clave_que_no_esta_se_devuelve_0_cardinalidad() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let vector = vec!["SCARD".to_string(), "miClave".to_string()];
 
         let h = Arc::new(Mutex::new(bdd));
@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn scard_cuando_se_envia_una_clave_que_posee_dos_elementos_se_devuelve_2_de_cardinalidad() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         let mut set = HashSet::new();
         set.insert("miValor".to_string());
         set.insert("otroValor".to_string());
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn scard_cuando_se_envia_una_clave_invalida_se_envia_el_error_adecuado() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor(
             "miClave".to_string(),
             TipoRedis::Str("unString".to_string()),
@@ -333,7 +333,7 @@ mod tests {
     //sismember
     #[test]
     fn sismember_cuando_se_envia_una_clave_que_no_esta_devuelve_0_ya_que_no_pertenece() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let vector = vec![
             "SISMEMBER".to_string(),
             "miClave".to_string(),
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn sismember_cuando_se_envia_una_clave_que_posee_dos_elementos_y_se_pregunta_si_uno_de_ellos_pertenece_se_devuelve_1_de_true(
     ) {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         let mut set = HashSet::new();
         set.insert("miValor".to_string());
         set.insert("otroValor".to_string());
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn sismember_cuando_se_envia_una_clave_invalida_se_envia_el_error_adecuado() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor(
             "miClave".to_string(),
             TipoRedis::Str("unString".to_string()),
@@ -396,7 +396,7 @@ mod tests {
     //smembers
     #[test]
     fn smembers_cuando_se_envia_una_clave_que_no_esta_devuelve_un_vector_vacio() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let vector = vec!["SMEMBERS".to_string(), "miClave".to_string()];
 
         let h = Arc::new(Mutex::new(bdd));
@@ -408,7 +408,7 @@ mod tests {
 
     #[test]
     fn smembers_cuando_se_envia_una_clave_invalida_se_envia_el_error_adecuado() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor(
             "miClave".to_string(),
             TipoRedis::Str("unString".to_string()),
@@ -430,7 +430,7 @@ mod tests {
     //srem
     #[test]
     fn srem_cuando_se_envia_una_clave_que_no_esta_no_se_elimina_ningun_valor() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let vector = vec![
             "SREM".to_string(),
             "miClave".to_string(),
@@ -447,7 +447,7 @@ mod tests {
     #[test]
     fn srem_cuando_se_envia_una_clave_que_posee_dos_elementos_y_se_elimina_uno_este_no_se_encuentra(
     ) {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
 
         let mut set = HashSet::new();
         set.insert("miValor".to_string());
@@ -480,7 +480,7 @@ mod tests {
     #[test]
     fn srem_cuando_se_envia_una_clave_que_posee_dos_elementos_y_se_eliminan_solo_uno_dos_veces_no_se_encuentra_el_restante(
     ) {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
 
         let mut set = HashSet::new();
         set.insert("miValor".to_string());
@@ -513,7 +513,7 @@ mod tests {
 
     #[test]
     fn srem_cuando_se_envia_una_clave_invalida_se_envia_el_error_adecuado() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor(
             "miClave".to_string(),
             TipoRedis::Str("unString".to_string()),

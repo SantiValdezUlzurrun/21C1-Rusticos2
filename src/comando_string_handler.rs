@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn get_devuelve_el_valor_almacenado_en_el_hash() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
         let mut comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn get_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn set_almacena_un_valor_en_el_hash() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let mut comando = ComandoInfo::new(vec![
             "get".to_string(),
             "miClave".to_string(),
@@ -399,7 +399,7 @@ mod tests {
 
     #[test]
     fn append_agrega_el_string_enviado_al_final_del_string_guardado_con_la_misma_clave() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn append_agrega_un_string_al_hash_porque_no_hay_un_elemento_guarado_con_esa_clave() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
 
@@ -438,7 +438,7 @@ mod tests {
 
     #[test]
     fn append_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec![
             "APPEND".to_owned(),
@@ -456,7 +456,7 @@ mod tests {
 
     #[test]
     fn getdel_devuelve_el_valor_almacenado_en_el_hash() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
 
         let ptr_hash = Arc::new(Mutex::new(bdd));
@@ -473,7 +473,7 @@ mod tests {
 
     #[test]
     fn getdel_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn strlen_devuelve_el_valor_almacenado_en_el_hash() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("miValor".to_string()));
         let mut comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
@@ -499,7 +499,7 @@ mod tests {
 
     #[test]
     fn strlen_devuelve_error_al_ser_llamado_con_una_clave_que_correspondia_a_una_lista() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec!["get".to_string(), "miClave".to_string()]);
 
@@ -513,7 +513,7 @@ mod tests {
 
     #[test]
     fn decrby_resta_correcatemente_un_valor_entero_a_una_clave_parseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("1".to_string()));
         let mut comando = ComandoInfo::new(vec![
             "decrby".to_string(),
@@ -529,7 +529,7 @@ mod tests {
 
     #[test]
     fn decrby_resta_correcatemente_un_valor_entero_a_una_clave_negativa_parseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("-10".to_string()));
         let mut comando = ComandoInfo::new(vec![
             "decrby".to_string(),
@@ -545,7 +545,7 @@ mod tests {
 
     #[test]
     fn decrby_resta_correcatemente_un_valor_negativo_a_una_clave_parseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("10".to_string()));
         let mut comando = ComandoInfo::new(vec![
             "decrby".to_string(),
@@ -561,7 +561,7 @@ mod tests {
 
     #[test]
     fn decrby_setea_correcatemente_un_valor_entero_a_una_clave_inexistente() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let mut comando = ComandoInfo::new(vec![
             "decrby".to_string(),
             "miClave".to_string(),
@@ -576,7 +576,7 @@ mod tests {
 
     #[test]
     fn decrby_devuelve_error_un_valor_entero_a_una_clave_inparseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec![
             "decrby".to_string(),
@@ -594,7 +594,7 @@ mod tests {
 
     #[test]
     fn decrby_devuelve_error_un_valor_erroneo_a_una_clave_parseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("1".to_string()));
         let mut comando = ComandoInfo::new(vec![
             "decrby".to_string(),
@@ -610,7 +610,7 @@ mod tests {
 
     #[test]
     fn incrby_resta_correcatemente_un_valor_entero_a_una_clave_parseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("1".to_string()));
         let mut comando = ComandoInfo::new(vec![
             "incrby".to_string(),
@@ -626,7 +626,7 @@ mod tests {
 
     #[test]
     fn incrby_resta_correcatemente_un_valor_entero_a_una_clave_negativa_parseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("-10".to_string()));
         let mut comando = ComandoInfo::new(vec![
             "incrby".to_string(),
@@ -642,7 +642,7 @@ mod tests {
 
     #[test]
     fn incrby_resta_correcatemente_un_valor_negativo_a_una_clave_parseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("10".to_string()));
         let mut comando = ComandoInfo::new(vec![
             "incrby".to_string(),
@@ -658,7 +658,7 @@ mod tests {
 
     #[test]
     fn incrby_setea_correcatemente_un_valor_entero_a_una_clave_inexistente() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let mut comando = ComandoInfo::new(vec![
             "incrby".to_string(),
             "miClave".to_string(),
@@ -673,7 +673,7 @@ mod tests {
 
     #[test]
     fn incrby_devuelve_error_un_valor_entero_a_una_clave_inparseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Lista(Vec::new()));
         let mut comando = ComandoInfo::new(vec![
             "incrby".to_string(),
@@ -691,7 +691,7 @@ mod tests {
 
     #[test]
     fn incrby_devuelve_error_un_valor_erroneo_a_una_clave_parseable() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("miClave".to_string(), TipoRedis::Str("1".to_string()));
         let mut comando = ComandoInfo::new(vec![
             "incrby".to_string(),
@@ -707,7 +707,7 @@ mod tests {
 
     #[test]
     fn mget_devuelve_una_lista_con_todos_los_valores_de_las_claves() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
         bdd.guardar_valor("clave2".to_string(), TipoRedis::Str("2".to_string()));
         bdd.guardar_valor("clave3".to_string(), TipoRedis::Str("3".to_string()));
@@ -735,7 +735,7 @@ mod tests {
     #[test]
     fn mget_devuelve_una_lista_con_todos_los_valores_de_las_claves_y_si_la_clave_no_existe_devuelve_nil(
     ) {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
         bdd.guardar_valor("clave2".to_string(), TipoRedis::Str("2".to_string()));
         bdd.guardar_valor("clave3".to_string(), TipoRedis::Str("3".to_string()));
@@ -762,7 +762,7 @@ mod tests {
 
     #[test]
     fn mget_devuelve_una_lista_con_todos_nil_si_la_clave_no_existen() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
         bdd.guardar_valor("clave2".to_string(), TipoRedis::Str("2".to_string()));
         bdd.guardar_valor("clave3".to_string(), TipoRedis::Str("3".to_string()));
@@ -789,7 +789,7 @@ mod tests {
 
     #[test]
     fn mget_devuelve_una_lista_con_todos_nil_si_la_clave_no_es_de_tipo_str() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
         bdd.guardar_valor("clave2".to_string(), TipoRedis::Lista(Vec::new()));
         bdd.guardar_valor("clave3".to_string(), TipoRedis::Set(HashSet::new()));
@@ -816,7 +816,7 @@ mod tests {
 
     #[test]
     fn mget_devuelve_una_error_con_si_no_hay_parametro() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
         bdd.guardar_valor("clave1".to_string(), TipoRedis::Str("1".to_string()));
         bdd.guardar_valor("clave2".to_string(), TipoRedis::Lista(Vec::new()));
         bdd.guardar_valor("clave3".to_string(), TipoRedis::Set(HashSet::new()));
@@ -832,7 +832,7 @@ mod tests {
 
     #[test]
     fn mset_guarda_todos_los_valores() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
 
@@ -867,7 +867,7 @@ mod tests {
 
     #[test]
     fn mset_devuelve_un_error_tener_una_cantidad_de_argumentos_impares() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
 
@@ -892,7 +892,7 @@ mod tests {
 
     #[test]
     fn getset_devuelve_el_antiguo_valor_almacenado() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
 
         bdd.guardar_valor("clave".to_string(), TipoRedis::Str("clave".to_string()));
         let ptr_hash = Arc::new(Mutex::new(bdd));
@@ -917,7 +917,7 @@ mod tests {
 
     #[test]
     fn getset_devuelve_el_nil_si_no_existia_esa_clave() {
-        let bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let bdd: BaseDeDatos = BaseDeDatos::new();
 
         let ptr_hash = Arc::new(Mutex::new(bdd));
         let ptr_hash1 = Arc::clone(&ptr_hash);
@@ -938,7 +938,7 @@ mod tests {
 
     #[test]
     fn getset_devuelve_error_porque_la_clave_no_corresponde_a_un_string() {
-        let mut bdd: BaseDeDatos = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut bdd: BaseDeDatos = BaseDeDatos::new();
 
         bdd.guardar_valor("clave".to_string(), TipoRedis::Lista(vec![]));
         let ptr_hash = Arc::new(Mutex::new(bdd));

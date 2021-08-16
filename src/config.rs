@@ -1,12 +1,10 @@
-use crate::base_de_datos::BaseDeDatos;
 use crate::cliente::Cliente;
 use crate::log_handler::Logger;
+use crate::persistencia::Persistidor;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 use regex::Regex;
 
@@ -17,6 +15,7 @@ pub enum ArchivoError {
 #[derive(Debug)]
 pub struct Config {
     mapa_config: HashMap<String, String>,
+    persistidor: Option<Persistidor>,
     monitorear_ultimo_cliente: bool,
 }
 
@@ -29,9 +28,9 @@ impl Config {
         mapa_config.insert("timeout".to_string(), "0".to_string());
         mapa_config.insert("dbfilename".to_string(), "dump.rb".to_string());
         mapa_config.insert("logfile".to_string(), "redis.log".to_string());
-
         Config {
             mapa_config,
+            persistidor: None,
             monitorear_ultimo_cliente: false,
         }
     }
@@ -103,10 +102,10 @@ impl Config {
 
     pub fn info(&self) -> Vec<String> {
         let mut info = vec!["# Config".to_string(), "".to_string()];
-
         for (clave, valor) in &self.mapa_config {
             info.push(format!("{}:{}", clave, valor));
         }
+        info.push("".to_string());
         info
     }
 
@@ -114,14 +113,9 @@ impl Config {
         self.monitorear_ultimo_cliente = true;
     }
 
-    pub fn actualizar(
-        &mut self,
-        logger: &Logger,
-        cliente: Cliente,
-        tabla: Arc<Mutex<BaseDeDatos>>,
-    ) {
+    pub fn actualizar(&mut self, logger: &Logger, cliente: Cliente) {
         self.actualizar_log(logger, cliente);
-        self.actualizar_bdd(tabla);
+        self.actualizar_persistencia();
     }
 
     pub fn actualizar_log(&mut self, logger: &Logger, cliente: Cliente) {
@@ -133,10 +127,15 @@ impl Config {
         logger.archivo(self.logfile());
     }
 
-    pub fn actualizar_bdd(&self, tabla: Arc<Mutex<BaseDeDatos>>) {
-        if let Ok(b) = tabla.lock() {
-            b.cambiar_archivo(self.dbfilename())
+    pub fn actualizar_persistencia(&self) {
+        match &self.persistidor {
+            Some(p) => p.cambiar_archivo(self.dbfilename()),
+            None => (),
         }
+    }
+
+    pub fn set_persistidor(&mut self, p: Persistidor) {
+        self.persistidor = Some(p);
     }
 }
 
@@ -155,8 +154,13 @@ pub fn obtener_configuracion(ruta_archivo: String) -> Result<Config, ArchivoErro
         mapa.insert(argumento[0].to_string(), argumento[1].to_string());
     }
 
-    Ok(Config {
-        mapa_config: mapa,
-        monitorear_ultimo_cliente: false,
-    })
+    if mapa.is_empty() {
+        Ok(Config::new())
+    } else {
+        Ok(Config {
+            mapa_config: mapa,
+            persistidor: None,
+            monitorear_ultimo_cliente: false,
+        })
+    }
 }

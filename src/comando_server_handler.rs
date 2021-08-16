@@ -90,7 +90,7 @@ fn fconfig(
         }
     };
 
-    match parametro.as_str() {
+    match parametro.to_uppercase().as_str() {
         "GET" => config_get(comando, bdd, config),
         "SET" => config_set(comando, bdd, config),
         _ => ResultadoRedis::Error("ERR Opcion config not found".to_string()),

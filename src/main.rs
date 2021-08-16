@@ -16,6 +16,7 @@ mod comando_string_handler;
 mod config;
 mod http_parser;
 mod log_handler;
+mod observer;
 mod parser;
 mod persistencia;
 mod redis;
@@ -31,7 +32,7 @@ fn main() {
     let config = match env::args().last() {
         Some(ruta) => match obtener_configuracion(ruta) {
             Ok(config) => config,
-            Err(_) => return,
+            Err(_) => Config::new(),
         },
         None => Config::new(),
     };

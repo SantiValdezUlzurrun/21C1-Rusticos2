@@ -363,6 +363,9 @@ pub fn lrange(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>)
         Some((a, b)) => (a, b),
         None => return ResultadoRedis::Vector(vec![]),
     };
+    if b < a {
+        return ResultadoRedis::Vector(vec![]);
+    }
     let a_devolver: Vec<_> = lista[a..(b + 1)].to_vec();
 
     ResultadoRedis::Vector(
@@ -567,7 +570,7 @@ mod tests {
 
     #[test]
     fn lindex_busca_un_indice_positivo_en_una_clave_valor_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["1".to_string(), "2".to_string(), "3".to_string()]),
@@ -588,7 +591,7 @@ mod tests {
 
     #[test]
     fn lindex_busca_un_indice_negativo_en_una_clave_valor_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["1".to_string(), "2".to_string(), "3".to_string()]),
@@ -609,7 +612,7 @@ mod tests {
 
     #[test]
     fn lindex_busca_un_indice_fuera_de_rango_en_una_clave_valor_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["1".to_string(), "2".to_string(), "3".to_string()]),
@@ -630,7 +633,7 @@ mod tests {
 
     #[test]
     fn llen_la_longitud_de_una_lista_inexistente_es_cero() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
         let ptr = Arc::new(Mutex::new(data_base));
 
         let mut comando = ComandoInfo::new(vec!["llen".to_string(), "milista".to_string()]);
@@ -640,7 +643,7 @@ mod tests {
 
     #[test]
     fn llen_si_se_llama_llen_a_un_string_se_devuelve_un_error_de_tipo() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("milista".to_string(), TipoRedis::Str("hola".to_string()));
 
         let ptr = Arc::new(Mutex::new(data_base));
@@ -657,7 +660,7 @@ mod tests {
 
     #[test]
     fn llen_si_se_llama_llen_a_una_lista_devuelve_la_longitud_correctamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec![
@@ -677,7 +680,7 @@ mod tests {
 
     #[test]
     fn lpop_si_no_existe_la_lista_devuelve_nil() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -688,7 +691,7 @@ mod tests {
 
     #[test]
     fn lpop_si_existia_una_lista_y_luego_se_la_elimina_y_se_vuelve_a_hacer_pop_devuelve_nil() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -707,7 +710,7 @@ mod tests {
 
     #[test]
     fn lpop_si_se_llama_sobre_un_tipo_distinto_a_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -724,7 +727,7 @@ mod tests {
 
     #[test]
     fn lpop_si_se_llama_a_lpop_sin_el_parametro_count_se_devuelve_el_resultado_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -742,7 +745,7 @@ mod tests {
 
     #[test]
     fn lpop_si_se_llama_a_lpop_con_el_parametro_count_se_devuelve_el_resultado_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -767,7 +770,7 @@ mod tests {
 
     #[test]
     fn lpush_si_se_pushea_a_alguna_clave_existente_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -788,7 +791,7 @@ mod tests {
 
     #[test]
     fn lpush_si_no_existe_la_lista_se_crea_con_los_parametros_devolviendo_la_longitud_adecuada() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -804,7 +807,7 @@ mod tests {
     }
     #[test]
     fn lpush_si_no_existe_la_lista_se_crea_con_los_parametros_en_el_orden_adecuado() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -833,7 +836,7 @@ mod tests {
 
     #[test]
     fn lpush_cuando_se_pushea_a_una_lista_se_ordena_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec!["d".to_string()]),
@@ -870,7 +873,7 @@ mod tests {
 
     #[test]
     fn lpushx_si_se_pushea_a_alguna_clave_existente_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -891,7 +894,7 @@ mod tests {
 
     #[test]
     fn lpushx_si_no_existe_la_lista_no_se_crea() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -908,7 +911,7 @@ mod tests {
 
     #[test]
     fn lpushx_cuando_se_pushea_a_una_lista_se_ordena_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec!["d".to_string()]),
@@ -948,7 +951,7 @@ mod tests {
 
     #[test]
     fn lrange_si_se_lo_llama_sobre_algo_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -970,7 +973,7 @@ mod tests {
 
     #[test]
     fn lrange_si_se_pide_el_rango_de_una_lista_inexistente_devuelve_vector_vacio() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -990,7 +993,7 @@ mod tests {
     #[test]
     fn lrange_rangos_positivos_devuelven_los_elementos_correctamente_hasta_el_indice_final_inclusive(
     ) {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["0".to_string(), "1".to_string(), "2".to_string()]),
@@ -1015,7 +1018,7 @@ mod tests {
 
     #[test]
     fn lrange_maximo_rango() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["0".to_string(), "1".to_string(), "2".to_string()]),
@@ -1042,7 +1045,7 @@ mod tests {
     #[test]
     fn lrange_rangos_enteros_devuelven_los_elementos_correctamente_hasta_el_indice_final_inclusive()
     {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["0".to_string(), "1".to_string(), "2".to_string()]),
@@ -1064,7 +1067,7 @@ mod tests {
 
     #[test]
     fn lrange_rangos_enteros_con_interseccion_nula_devuelve_vector_vacio() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["0".to_string(), "1".to_string(), "2".to_string()]),
@@ -1083,7 +1086,7 @@ mod tests {
 
     #[test]
     fn lrem_si_se_pide_eliminar_de_una_clave_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -1104,7 +1107,7 @@ mod tests {
 
     #[test]
     fn lrem_si_se_pide_eliminar_un_valor_que_no_esta_en_la_lista_no_se_devuelve_un_cero() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
         let ptr = Arc::new(Mutex::new(data_base));
 
         let mut comando = ComandoInfo::new(vec![
@@ -1119,7 +1122,7 @@ mod tests {
 
     #[test]
     fn lrem_si_se_pide_eliminar_dos_claves_de_izquierda_a_derecha_se_eliminan_correctamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec![
@@ -1153,7 +1156,7 @@ mod tests {
 
     #[test]
     fn lrem_si_se_pide_eliminar_dos_claves_de_derecha_a_izquierda_se_eliminan_correctamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec![
@@ -1189,7 +1192,7 @@ mod tests {
 
     #[test]
     fn lset_si_se_lo_llama_sobre_algo_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1211,7 +1214,7 @@ mod tests {
 
     #[test]
     fn lset_inserta_en_la_lista_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Lista(vec!["a".to_string()]));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1237,7 +1240,7 @@ mod tests {
 
     #[test]
     fn rpop_si_no_existe_la_lista_devuelve_nil() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -1248,7 +1251,7 @@ mod tests {
 
     #[test]
     fn rpop_si_existia_una_lista_y_luego_se_la_elimina_y_se_vuelve_a_hacer_pop_devuelve_nil() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -1267,7 +1270,7 @@ mod tests {
 
     #[test]
     fn rpop_si_se_llama_sobre_un_tipo_distinto_a_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1284,7 +1287,7 @@ mod tests {
 
     #[test]
     fn rpop_si_se_llama_a_rpop_sin_el_parametro_count_se_devuelve_el_resultado_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -1302,7 +1305,7 @@ mod tests {
 
     #[test]
     fn rpop_si_se_llama_a_rpop_con_el_parametro_count_se_devuelve_el_resultado_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -1327,7 +1330,7 @@ mod tests {
 
     #[test]
     fn rpush_si_se_pushea_a_alguna_clave_existente_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1348,7 +1351,7 @@ mod tests {
 
     #[test]
     fn rpush_si_no_existe_la_lista_se_crea_con_los_parametros_devolviendo_la_longitud_adecuada() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -1364,7 +1367,7 @@ mod tests {
     }
     #[test]
     fn rpush_si_no_existe_la_lista_se_crea_con_los_parametros_en_el_orden_adecuado() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -1393,7 +1396,7 @@ mod tests {
 
     #[test]
     fn rpush_cuando_se_pushea_a_una_lista_se_ordena_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec!["d".to_string()]),
@@ -1430,7 +1433,7 @@ mod tests {
 
     #[test]
     fn rpushx_si_se_pushea_a_alguna_clave_existente_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1451,7 +1454,7 @@ mod tests {
 
     #[test]
     fn rpushx_si_no_existe_la_lista_no_se_crea() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -1468,7 +1471,7 @@ mod tests {
 
     #[test]
     fn rpushx_cuando_se_pushea_a_una_lista_se_ordena_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec!["d".to_string()]),
