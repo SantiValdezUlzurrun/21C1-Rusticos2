@@ -1,5 +1,6 @@
 use std::option::Option;
 
+/// Representa un comando redis
 #[derive(Debug, Clone)]
 pub struct ComandoInfo {
     nombre: String,
@@ -8,6 +9,12 @@ pub struct ComandoInfo {
 }
 
 impl ComandoInfo {
+
+    /// Instancia un comando redis en condiciones de obtener sus valores
+    ///
+    /// # Argumentos
+    ///
+    /// * `comando` - comando redis parseado
     pub fn new(mut comando_parseado: Vec<String>) -> Self {
         if comando_parseado.len() == 1 {
             return ComandoInfo {
@@ -26,9 +33,12 @@ impl ComandoInfo {
         }
     }
 
+    /// Nombre del comando
     pub fn get_nombre(&self) -> String {
         self.nombre.clone()
     }
+
+    /// Clave a la que afecta el comando
     pub fn get_clave(&mut self) -> Option<String> {
         self.index = 1;
         self.parametros
@@ -44,6 +54,7 @@ impl ComandoInfo {
         None
     }
 
+    /// Iterador sobre los parametros
     pub fn get_parametro(&mut self) -> Option<String> {
         if self.index < self.parametros.len() {
             let a_devolver = &self.parametros[self.index];
@@ -53,6 +64,7 @@ impl ComandoInfo {
         None
     }
 
+    /// Descripcion del comando enviado
     pub fn descripcion(&self) -> String {
         let mut descripcion = self.nombre.clone();
 
