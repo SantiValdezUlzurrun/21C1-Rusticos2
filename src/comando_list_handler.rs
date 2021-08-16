@@ -363,6 +363,9 @@ pub fn lrange(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>)
         Some((a, b)) => (a, b),
         None => return ResultadoRedis::Vector(vec![]),
     };
+    if b < a {
+        return ResultadoRedis::Vector(vec![])
+    }
     let a_devolver: Vec<_> = lista[a..(b + 1)].to_vec();
 
     ResultadoRedis::Vector(
