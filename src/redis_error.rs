@@ -1,11 +1,13 @@
 use std::fmt;
 
+/// Representa un error ocurrido por la ejecucion del servidor de Redis
 pub enum RedisError {
     Server,
     Coneccion,
     Inicializacion,
 }
 
+/// Mensaje mas descriptivo del porque del lanzamiento del error
 impl fmt::Display for RedisError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {

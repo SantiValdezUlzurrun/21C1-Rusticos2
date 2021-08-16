@@ -28,6 +28,7 @@ use std::env;
 use crate::config::{obtener_configuracion, Config};
 use crate::redis::Redis;
 
+/// Ejecuta el servidor redis
 fn main() {
     let config = match env::args().last() {
         Some(ruta) => match obtener_configuracion(ruta) {

@@ -2,23 +2,31 @@ use crate::base_de_datos::ResultadoRedis;
 use crate::comando_info::ComandoInfo;
 use std::io::{BufRead, BufReader, Read};
 
+/// Errores que pueden ocurrir en la ejecucion del Parser
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParserError {
+    /// Error en como esta formateado el Comando de Redis
     RedisSyntaxError,
+    /// Se esperaba una cadena pero estaba vacia
     MensajeVacioError,
 }
 
+/// Entidad encargada de parsear stream que cumplen con la sintaxis de Redis
 pub struct Parser<R> {
     lector: BufReader<R>,
 }
 
 impl<R: Read> Parser<R> {
+
+    /// Instancia a un parser con cualquier entidad que implemente el trait Read
+    /// a partir de el se encargara de parsear
     pub fn new(stream: R) -> Self {
         Parser {
             lector: BufReader::new(stream),
         }
     }
 
+    /// Parsea el stream obteniendo un Comando o un Error
     pub fn parsear_stream(self) -> Result<ComandoInfo, ParserError> {
         let mut lineas = self.lector.lines();
 
@@ -54,6 +62,8 @@ impl<R: Read> Parser<R> {
         Ok(ComandoInfo::new(comando))
     }
 }
+
+/// Parsea la respuesta para que cumpla con el protocolo Redis
 pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
     match res {
         ResultadoRedis::StrSimple(cad) => format!("+{}\r\n", cad),
