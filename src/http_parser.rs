@@ -3,17 +3,22 @@ use crate::comando_http::ComandoHTTP;
 use crate::parser::ParserError;
 use std::io::{BufReader, Read};
 
+/// Entidad encargada de parsear stream que cumplen con la sintaxis del protocolo HTTP/1.1
 pub struct HTTPParser<R> {
     lector: BufReader<R>,
 }
 
 impl<R: Read + std::fmt::Debug> HTTPParser<R> {
+
+    /// Instancia a un parser con cualquier entidad que implemente el trait Read
+    /// a partir de el se encargara de parsear
     pub fn new(stream: R) -> Self {
         HTTPParser {
             lector: BufReader::new(stream),
         }
     }
 
+    /// Parsea el stream obteniendo un Comando del protocolo HTTP o un Error
     pub fn parsear_stream(mut self) -> Result<ComandoHTTP, ParserError> {
         let mut buffer = vec![0; 5000];
         match self.lector.read(&mut buffer) {
@@ -42,6 +47,7 @@ impl<R: Read + std::fmt::Debug> HTTPParser<R> {
     }
 }
 
+/// Parsea la respuesta para que se vea mas presentable al usuario
 pub fn parsear_respuesta(res: &ResultadoRedis) -> String {
     match res {
         ResultadoRedis::StrSimple(cad) => cad.to_string(),

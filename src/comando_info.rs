@@ -9,6 +9,12 @@ pub struct ComandoInfo {
 }
 
 impl ComandoInfo {
+
+    /// Instancia un comando redis en condiciones de obtener sus valores
+    ///
+    /// # Argumentos
+    ///
+    /// * `comando` - comando redis parseado
     pub fn new(mut comando_parseado: Vec<String>) -> Self {
         if comando_parseado.len() == 1 {
             return ComandoInfo {
@@ -27,9 +33,12 @@ impl ComandoInfo {
         }
     }
 
+    /// Nombre del comando
     pub fn get_nombre(&self) -> String {
         self.nombre.clone()
     }
+
+    /// Clave a la que afecta el comando
     pub fn get_clave(&mut self) -> Option<String> {
         self.index = 1;
         self.parametros

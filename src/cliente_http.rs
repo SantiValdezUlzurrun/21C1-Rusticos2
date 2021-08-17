@@ -4,14 +4,13 @@ use crate::comando_http::ComandoHTTP;
 use crate::comando_info::ComandoInfo;
 use crate::http_parser::{parsear_respuesta, HTTPParser};
 use crate::redis_error::RedisError;
-use std::fs::read_to_string;
-use std::fs::File;
+use std::fs::{read_to_string, File};
 
 use std::fmt;
-use std::io::Read;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::TcpStream;
 
+/// Representa un Cliente que se comunica utilizando el protocolo HTTP
 pub struct ClienteHTTP {
     id: Token,
     socket: Option<TcpStream>,
@@ -21,6 +20,13 @@ pub struct ClienteHTTP {
 }
 
 impl ClienteHTTP {
+
+    /// Se instancia un ClienteHTTP en condiciones de procesar mensajes
+    ///
+    /// # Argumentos
+    ///
+    /// * `token` - id unica
+    /// * `socket` - stream especifico del cliente
     pub fn new(id: Token, socket: TcpStream) -> Self {
         let pag_index = match read_to_string("resources/index.html") {
             Ok(s) => s,
@@ -45,6 +51,7 @@ impl ClienteHTTP {
         }
     }
 
+    /// Procesa requests Get devolviendo que no recibio ningun comando
     fn manejar_get(&mut self, comando: ComandoHTTP) -> Result<Option<ComandoInfo>, RedisError> {
         if comando.get_argumento() == Some("/favicon.ico".to_string()) {
             let respuesta = format!(
@@ -73,6 +80,8 @@ impl ClienteHTTP {
             }
         }
     }
+
+    /// Obtiene el comando redis encapsulado en el ComandoHTTP
     fn obtener_comando_de_post(
         &mut self,
         comando: ComandoHTTP,
@@ -83,6 +92,7 @@ impl ClienteHTTP {
         }
     }
 
+    /// Maneja cualquier tipo de request no manejada respondiendo que no se recibio ningun comando
     fn manejar_error(&mut self, _comando: ComandoHTTP) -> Result<Option<ComandoInfo>, RedisError> {
         let respuesta = "HTTP/1.1 400 BAD REQUEST\r\n\r\n".to_string();
         match self.enviar_mensaje(respuesta) {
@@ -91,6 +101,7 @@ impl ClienteHTTP {
         }
     }
 
+    /// Intenta clonar el TcpStream asociado al Cliente
     fn obtener_socket(&self) -> Option<TcpStream> {
         let socket = match &self.socket {
             None => return None,
@@ -122,6 +133,13 @@ impl ClienteHTTP {
 }
 
 impl TipoCliente for ClienteHTTP {
+    /// Encapsula el obtener el comando en particular
+    ///
+    /// # Resultados
+    ///
+    /// * `Ok(Some(c))` - Se obtiene el comando enviado correctamente
+    /// * `Ok(None)` - El usuario no envio un comando pero su request fue procesada correctamente
+    /// * `Err(e)` - Se produjo un error al la hora de obtener el comando
     fn obtener_comando(&mut self) -> Result<Option<ComandoInfo>, RedisError> {
         let stream = match self.obtener_socket() {
             Some(s) => s,
@@ -165,13 +183,6 @@ impl TipoCliente for ClienteHTTP {
         self.mando = true;
 
         let mensaje = format!("HTTP/1.1 200 OK\r\n\r\n{}", parsear_respuesta(resultado));
-
-        /*
-        let mensaje = match resultado{
-            ResultadoRedis::Error(_) => format!("HTTP/1.1 200 OK\r\n\r\n{}","HELP"),
-            _ => format!("HTTP/1.1 200 OK\r\n\r\n{}", parsear_respuesta(resultado)),
-        };
-        */
         self.enviar_mensaje(mensaje)
     }
 

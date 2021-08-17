@@ -8,17 +8,41 @@ use std::fmt::Debug;
 
 use std::net::TcpStream;
 
+/// Token unico asociado a un Cliente
 pub type Token = i64;
+
+/// Interfaz de Cliente
 pub type Cliente = Box<dyn TipoCliente + Send>;
 
+/// Mensajes publicos que un Cliente debe implementar
 pub trait TipoCliente: ClienteClone + ClienteDebug {
+
+    /// Encapsula el obtener el comando en particular
+    ///
+    /// # Resultados
+    ///
+    /// * `Ok(Some(c))` - Se obtiene el comando enviado correctamente
+    /// * `Ok(None)` - El usuario no envio un comando pero fue procesada correctamente
+    /// * `Err(e)` - Se produjo un error al la hora de obtener el comando
     fn obtener_comando(&mut self) -> Result<Option<ComandoInfo>, RedisError>;
+
+    /// Devuelve una descripcion del Cliente
     fn obtener_addr(&self) -> String;
+
     fn envio_informacion(&self) -> bool;
+
     fn esta_conectado(&self) -> bool;
+
+    /// enviar el resultado procesandolo en el protocolo especifico
     fn enviar_resultado(&mut self, resultado: &ResultadoRedis) -> Result<(), RedisError>;
+
+    /// envia un mensaje sin procesar al Cliente
     fn enviar_mensaje(&mut self, mensaje: String) -> Result<(), RedisError>;
+
+
     fn obtener_token(&self) -> Token;
+
+    /// Predicado que indica si un Cliente puede enviar determinado comando
     fn soporta_comando(&self, comando: &str) -> bool;
 }
 
@@ -68,6 +92,8 @@ where
     }
 }
 
+/// Crea a un cliente especifico dependiendo de como sea el protocolo que utilice
+/// ya sea HTTP o Redis
 pub fn crear_cliente(id: Token, timeout: u64, stream: TcpStream) -> Box<dyn TipoCliente + Send> {
     let mut buffer = [0; 1024];
     match stream.peek(&mut buffer) {

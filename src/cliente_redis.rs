@@ -3,13 +3,13 @@ use crate::cliente::{TipoCliente, Token};
 use crate::comando_info::ComandoInfo;
 use crate::parser::{parsear_respuesta, Parser};
 use crate::redis_error::RedisError;
-use std::time::Duration;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use std::fmt;
 use std::io::Write;
 use std::net::TcpStream;
 
+/// Representa a un Cliente que envia mensajes utilizando el protocolo redis
 pub struct ClienteRedis {
     id: Token,
     canales: usize,
@@ -19,6 +19,15 @@ pub struct ClienteRedis {
 }
 
 impl ClienteRedis {
+
+
+    /// Se instancia un ClienteRedis en condiciones de procesar mensajes
+    ///
+    /// # Argumentos
+    ///
+    /// * `token` - id unica
+    /// * `timeout` - intervalo de tiempo a esperar a que el usuario envie un mensaje
+    /// * `socket` - stream especifico del cliente
     pub fn new(id: Token, timeout: u64, stream: TcpStream) -> Self {
         let duracion = match timeout {
             0 => None,
@@ -48,6 +57,13 @@ impl ClienteRedis {
 }
 
 impl TipoCliente for ClienteRedis {
+
+    /// Encapsula el obtener el comando en particular
+    ///
+    /// # Resultados
+    ///
+    /// * `Ok(Some(c))` - Se obtiene el comando enviado correctamente
+    /// * `Err(e)` - Se produjo un error al la hora de obtener el comando
     fn obtener_comando(&mut self) -> Result<Option<ComandoInfo>, RedisError> {
         let stream = match self.obtener_socket() {
             Some(s) => s,
