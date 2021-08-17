@@ -35,7 +35,7 @@ impl ComandoHandler for ComandoListHandler {
         (self.a_ejecutar)(&mut self.comando, bdd)
     }
 }
-
+/// Se encarga de detectar si el comando corresponde a los implementados del tipo lista
 pub fn es_comando_list(comando: &str) -> bool {
     let comandos = vec![
         "LINDEX", "LPOP", "RPOP", "LPUSH", "LPUSHX", "RPUSH", "RPUSHX", "LRANGE", "LREM", "LSET",
@@ -43,30 +43,42 @@ pub fn es_comando_list(comando: &str) -> bool {
     ];
     comandos.iter().any(|&c| c == comando)
 }
-
+/// Retorna el elemento de la posición index en la lista almacenada en la clave indicada. El índice comienza en 0. Los valores negativos se pueden usar para determinar elementos desde el final de la lista: -1 es el último elemento, -2 es el anteúlitmo, y así. Retorna error si el valor de esa clave no es una lista
 pub fn lindex(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lindex' command".to_string(),
+            )
+        }
     };
 
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lindex' command".to_string(),
+            )
         }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
-            _ => return ResultadoRedis::Error("WRONGTYPE".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
 
     let indice: i32 = match parametro.parse() {
         Ok(v) => v,
-        Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+        Err(_) => {
+            return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string())
+        }
     };
     let tamanio = lista.len() as i32;
 
@@ -78,27 +90,35 @@ pub fn lindex(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Result
         ResultadoRedis::BulkStr("nil".to_string())
     }
 }
-
+/// Retorna el largo dela lista almacenada en la clave. Si la clave no existe, se interpreta como lista vacía, retornando 0. Se retorna error si el valor almacenado en la clave no es una lista
 pub fn llen(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'llen' command".to_string(),
+            )
+        }
     };
 
     ResultadoRedis::Int(match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.len(),
             None => 0,
-            _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     } as isize)
 }
-
+/// Elimina y retorna el primer elemento de la lista almacenada en la clave. Se puede indicar un parámetro adicional count para indicar obtener esa cantidad de elementos
 pub fn lpop(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     pop(comando, base_de_datos, false)
 }
-
+/// Elimina y obtiene el/los último/s elemento/s de la lista almacenada en la clave indicada. Por defecto, es un solo elemento, se puede indicar una cantidad
 pub fn rpop(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     pop(comando, base_de_datos, true)
 }
@@ -106,12 +126,20 @@ pub fn rpop(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -
 fn pop(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>, reversed: bool) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'pop' command".to_string(),
+            )
+        }
     };
     let indice = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(i) => i,
-            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
         None => 1,
     };
@@ -119,9 +147,13 @@ fn pop(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>, reversed: bool) 
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Nil,
-            _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
 
     if reversed {
@@ -142,7 +174,7 @@ fn pop(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>, reversed: bool) 
                 bdd.eliminar_clave(&clave);
             }
         }
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
     if a_devolver.len() == 1 {
         return ResultadoRedis::BulkStr(a_devolver[0].clone());
@@ -173,108 +205,167 @@ fn push(
     let long = lista.len();
     match bdd.lock() {
         Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Lista(lista)),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
     ResultadoRedis::Int(long as isize)
 }
-
+/// Inserta todos los valores especificados en el inicio de la lista de la clave especificada. Si no existe la clave, se crea inicialmente como una lista vacía para luego aplicar las operaciones. Se retorna error si la clave almacena un elemento que no es una lista
 pub fn lpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lpush' command".to_string(),
+            )
+        }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => Vec::new(),
-            _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
 
     push(lista, clave, comando, bdd, false)
 }
-
+/// Inserta los valores especificados al inicio de lalista, solamente si la clave existe y almacena una lista. A diferencia de LPUSH, no se realiza operación si la clave no existe
 pub fn lpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lpushx' command".to_string(),
+            )
+        }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Int(0),
-            _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     push(lista, clave, comando, bdd, false)
 }
-
+/// Inserta todos los valores especificados al final de la lista indicada en la clave. Si la clave no existe, se crear como una lista vacía antes de realizar la operación. Se retorna error si el elemento contenido no es una lista
 pub fn rpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'rpush' command".to_string(),
+            )
+        }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => Vec::new(),
-            _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     push(lista, clave, comando, bdd, true)
 }
-
+/// Inserta los valores especificados al final de la lista almacenada en la clave indicada, solamente si la clave contiene una lista. En caso contrario, no se realiza ninguna operación
 pub fn rpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'rpushx' command".to_string(),
+            )
+        }
     };
     let lista = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Int(0),
-            _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     push(lista, clave, comando, bdd, true)
 }
-
+/// Retorna los elementos especificados de la lista almacenada en la clave indicada. Los inicios y fin de rango se consideran con el 0 como primer elemento de la lista. Estos valores pueden ser negativos, indicando que corresponde al final de la lista: -1 es el último elemento
 pub fn lrange(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrange' command".to_string(),
+            )
+        }
     };
     let inicio: i32 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(i) => i,
-            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
-        None => return ResultadoRedis::Error("ERR numero equivocado de parametros".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrange' command".to_string(),
+            )
+        }
     };
     let fin: i32 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(i) => i,
-            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
-        None => return ResultadoRedis::Error("ERR numero equivocado de parametros".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrange' command".to_string(),
+            )
+        }
     };
 
     let lista = match base_de_datos.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Vector(vec![]),
-            _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     let (a, b) = match obtener_intervalo(inicio, fin, lista.len() as i32) {
         Some((a, b)) => (a, b),
         None => return ResultadoRedis::Vector(vec![]),
     };
+    if b < a {
+        return ResultadoRedis::Vector(vec![]);
+    }
     let a_devolver: Vec<_> = lista[a..(b + 1)].to_vec();
 
     ResultadoRedis::Vector(
@@ -329,23 +420,40 @@ fn obtener_indice_superior(fin: i32, limite: i32) -> Option<i32> {
 fn esta_en_rango_lista(valor: i32, limite: i32) -> bool {
     0 <= valor && valor < limite
 }
-
+/// Elimina la primer cantidad count de ocurrencias de elementos de la lista almacenada en la clave, igual al elemento indicado por parámetro. El parámetro cantidad influye de esta manera:
+///  count > 0: Elimina elementos iguales al indicado comenzando desde el inicio de la lista.
+///  count < 0: Elimina elementos iguales al indicado comenzando desde el final de la lista.
+///  count = 0: Elimina todos los elementos iguales al indicado.
 pub fn lrem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrem' command".to_string(),
+            )
+        }
     };
     let indice: i32 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(i) => i,
-            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
-        None => return ResultadoRedis::Error("ERR numero equivocado de parametros".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrem' command".to_string(),
+            )
+        }
     };
     let a_eliminar = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lrem' command".to_string(),
+            )
         }
     };
 
@@ -353,9 +461,13 @@ pub fn lrem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => return ResultadoRedis::Int(0),
-            _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
 
     let mut i = indice;
@@ -385,33 +497,43 @@ pub fn lrem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
                 bdd.eliminar_clave(&clave);
             }
         }
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
     ResultadoRedis::Int(cant_eliminada as isize)
 }
-
+/// Setea el elemento de la posición index de la lista con el elemento suministrado. Se retorna error si se indica un rango inválido
 pub fn lset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lset' command".to_string(),
+            )
+        }
     };
 
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lset' command".to_string(),
+            )
         }
     };
 
     let indice: i32 = match parametro.parse() {
         Ok(v) => v,
-        Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+        Err(_) => {
+            return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string())
+        }
     };
 
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'lset' command".to_string(),
+            )
         }
     };
 
@@ -419,9 +541,13 @@ pub fn lset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
         Ok(bdd) => match bdd.obtener_valor(&clave) {
             Some(TipoRedis::Lista(lista)) => lista.clone(),
             None => Vec::new(),
-            _ => return ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
 
     let tamanio = lista.len() as i32;
@@ -431,12 +557,12 @@ pub fn lset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
     } else if 0 > indice && tamanio + indice >= 0 {
         lista.insert((tamanio + indice) as usize as usize, parametro);
     } else {
-        return ResultadoRedis::Error("ERR index out of range".to_string());
+        return ResultadoRedis::Error("ERR value is not an integer or out of range".to_string());
     }
 
     match bdd.lock() {
         Ok(mut bdd) => bdd.guardar_valor(clave, TipoRedis::Lista(lista)),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
     ResultadoRedis::StrSimple("OK".to_string())
 }
@@ -447,7 +573,7 @@ mod tests {
 
     #[test]
     fn lindex_busca_un_indice_positivo_en_una_clave_valor_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["1".to_string(), "2".to_string(), "3".to_string()]),
@@ -468,7 +594,7 @@ mod tests {
 
     #[test]
     fn lindex_busca_un_indice_negativo_en_una_clave_valor_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["1".to_string(), "2".to_string(), "3".to_string()]),
@@ -489,7 +615,7 @@ mod tests {
 
     #[test]
     fn lindex_busca_un_indice_fuera_de_rango_en_una_clave_valor_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["1".to_string(), "2".to_string(), "3".to_string()]),
@@ -510,7 +636,7 @@ mod tests {
 
     #[test]
     fn llen_la_longitud_de_una_lista_inexistente_es_cero() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
         let ptr = Arc::new(Mutex::new(data_base));
 
         let mut comando = ComandoInfo::new(vec!["llen".to_string(), "milista".to_string()]);
@@ -520,7 +646,7 @@ mod tests {
 
     #[test]
     fn llen_si_se_llama_llen_a_un_string_se_devuelve_un_error_de_tipo() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("milista".to_string(), TipoRedis::Str("hola".to_string()));
 
         let ptr = Arc::new(Mutex::new(data_base));
@@ -528,14 +654,16 @@ mod tests {
         let mut comando = ComandoInfo::new(vec!["llen".to_string(), "milista".to_string()]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             llen(&mut comando, ptr)
         );
     }
 
     #[test]
     fn llen_si_se_llama_llen_a_una_lista_devuelve_la_longitud_correctamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec![
@@ -555,7 +683,7 @@ mod tests {
 
     #[test]
     fn lpop_si_no_existe_la_lista_devuelve_nil() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -566,7 +694,7 @@ mod tests {
 
     #[test]
     fn lpop_si_existia_una_lista_y_luego_se_la_elimina_y_se_vuelve_a_hacer_pop_devuelve_nil() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -585,7 +713,7 @@ mod tests {
 
     #[test]
     fn lpop_si_se_llama_sobre_un_tipo_distinto_a_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -593,14 +721,16 @@ mod tests {
         let mut comando = ComandoInfo::new(vec!["lpop".to_string(), "clave".to_string()]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lpop(&mut comando, ptr)
         );
     }
 
     #[test]
     fn lpop_si_se_llama_a_lpop_sin_el_parametro_count_se_devuelve_el_resultado_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -618,7 +748,7 @@ mod tests {
 
     #[test]
     fn lpop_si_se_llama_a_lpop_con_el_parametro_count_se_devuelve_el_resultado_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -643,7 +773,7 @@ mod tests {
 
     #[test]
     fn lpush_si_se_pushea_a_alguna_clave_existente_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -655,14 +785,16 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lpush(&mut comando, ptr)
         );
     }
 
     #[test]
     fn lpush_si_no_existe_la_lista_se_crea_con_los_parametros_devolviendo_la_longitud_adecuada() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -678,7 +810,7 @@ mod tests {
     }
     #[test]
     fn lpush_si_no_existe_la_lista_se_crea_con_los_parametros_en_el_orden_adecuado() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -707,7 +839,7 @@ mod tests {
 
     #[test]
     fn lpush_cuando_se_pushea_a_una_lista_se_ordena_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec!["d".to_string()]),
@@ -744,7 +876,7 @@ mod tests {
 
     #[test]
     fn lpushx_si_se_pushea_a_alguna_clave_existente_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -756,14 +888,16 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lpushx(&mut comando, ptr)
         );
     }
 
     #[test]
     fn lpushx_si_no_existe_la_lista_no_se_crea() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -780,7 +914,7 @@ mod tests {
 
     #[test]
     fn lpushx_cuando_se_pushea_a_una_lista_se_ordena_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec!["d".to_string()]),
@@ -820,7 +954,7 @@ mod tests {
 
     #[test]
     fn lrange_si_se_lo_llama_sobre_algo_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -833,14 +967,16 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lrange(&mut comando, ptr)
         );
     }
 
     #[test]
     fn lrange_si_se_pide_el_rango_de_una_lista_inexistente_devuelve_vector_vacio() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -860,7 +996,7 @@ mod tests {
     #[test]
     fn lrange_rangos_positivos_devuelven_los_elementos_correctamente_hasta_el_indice_final_inclusive(
     ) {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["0".to_string(), "1".to_string(), "2".to_string()]),
@@ -885,7 +1021,7 @@ mod tests {
 
     #[test]
     fn lrange_maximo_rango() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["0".to_string(), "1".to_string(), "2".to_string()]),
@@ -912,7 +1048,7 @@ mod tests {
     #[test]
     fn lrange_rangos_enteros_devuelven_los_elementos_correctamente_hasta_el_indice_final_inclusive()
     {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["0".to_string(), "1".to_string(), "2".to_string()]),
@@ -934,7 +1070,7 @@ mod tests {
 
     #[test]
     fn lrange_rangos_enteros_con_interseccion_nula_devuelve_vector_vacio() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec!["0".to_string(), "1".to_string(), "2".to_string()]),
@@ -953,7 +1089,7 @@ mod tests {
 
     #[test]
     fn lrem_si_se_pide_eliminar_de_una_clave_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -965,14 +1101,16 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lrem(&mut comando, ptr)
         );
     }
 
     #[test]
     fn lrem_si_se_pide_eliminar_un_valor_que_no_esta_en_la_lista_no_se_devuelve_un_cero() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
         let ptr = Arc::new(Mutex::new(data_base));
 
         let mut comando = ComandoInfo::new(vec![
@@ -987,7 +1125,7 @@ mod tests {
 
     #[test]
     fn lrem_si_se_pide_eliminar_dos_claves_de_izquierda_a_derecha_se_eliminan_correctamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec![
@@ -1021,7 +1159,7 @@ mod tests {
 
     #[test]
     fn lrem_si_se_pide_eliminar_dos_claves_de_derecha_a_izquierda_se_eliminan_correctamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "clave".to_string(),
             TipoRedis::Lista(vec![
@@ -1057,7 +1195,7 @@ mod tests {
 
     #[test]
     fn lset_si_se_lo_llama_sobre_algo_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1070,14 +1208,16 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             lset(&mut comando, ptr)
         );
     }
 
     #[test]
     fn lset_inserta_en_la_lista_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Lista(vec!["a".to_string()]));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1103,7 +1243,7 @@ mod tests {
 
     #[test]
     fn rpop_si_no_existe_la_lista_devuelve_nil() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -1114,7 +1254,7 @@ mod tests {
 
     #[test]
     fn rpop_si_existia_una_lista_y_luego_se_la_elimina_y_se_vuelve_a_hacer_pop_devuelve_nil() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -1133,7 +1273,7 @@ mod tests {
 
     #[test]
     fn rpop_si_se_llama_sobre_un_tipo_distinto_a_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1141,14 +1281,16 @@ mod tests {
         let mut comando = ComandoInfo::new(vec!["rpop".to_string(), "clave".to_string()]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             rpop(&mut comando, ptr)
         );
     }
 
     #[test]
     fn rpop_si_se_llama_a_rpop_sin_el_parametro_count_se_devuelve_el_resultado_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -1166,7 +1308,7 @@ mod tests {
 
     #[test]
     fn rpop_si_se_llama_a_rpop_con_el_parametro_count_se_devuelve_el_resultado_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor(
             "milista".to_string(),
@@ -1191,7 +1333,7 @@ mod tests {
 
     #[test]
     fn rpush_si_se_pushea_a_alguna_clave_existente_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1203,14 +1345,16 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             rpush(&mut comando, ptr)
         );
     }
 
     #[test]
     fn rpush_si_no_existe_la_lista_se_crea_con_los_parametros_devolviendo_la_longitud_adecuada() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -1226,7 +1370,7 @@ mod tests {
     }
     #[test]
     fn rpush_si_no_existe_la_lista_se_crea_con_los_parametros_en_el_orden_adecuado() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -1255,7 +1399,7 @@ mod tests {
 
     #[test]
     fn rpush_cuando_se_pushea_a_una_lista_se_ordena_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec!["d".to_string()]),
@@ -1292,7 +1436,7 @@ mod tests {
 
     #[test]
     fn rpushx_si_se_pushea_a_alguna_clave_existente_que_no_es_una_lista_devuelve_wrong_type() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
 
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
@@ -1304,14 +1448,16 @@ mod tests {
         ]);
 
         assert_eq!(
-            ResultadoRedis::Error("WRONGTYPE La clave no es una lista".to_string()),
+            ResultadoRedis::Error(
+                "WRONGTYPE Operation against a key holding the wrong kind of value".to_string()
+            ),
             rpushx(&mut comando, ptr)
         );
     }
 
     #[test]
     fn rpushx_si_no_existe_la_lista_no_se_crea() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
 
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -1328,7 +1474,7 @@ mod tests {
 
     #[test]
     fn rpushx_cuando_se_pushea_a_una_lista_se_ordena_adecuadamente() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "milista".to_string(),
             TipoRedis::Lista(vec!["d".to_string()]),

@@ -1,10 +1,9 @@
-use std::collections::HashMap;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::BufRead;
-use std::io::BufReader;
-use std::io::Result;
-use std::io::Write;
+use crate::observer::Observer;
+use std::collections::{HashMap, HashSet};
+use std::fs::{File, OpenOptions};
+use std::io::{BufRead, BufReader, Result, Write};
+use std::iter::FromIterator;
+
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::{Duration, Instant};
 
@@ -17,12 +16,17 @@ const SET: &str = "SET";
 const EX: &str = "EX";
 const SEPARADOR: &str = ":";
 
+/// Representa un mensaje que puede enviar el Persistidor al PersistidorHandler
 pub enum MensajePersistencia {
+    /// Encapsula la tabla a persistir
     Info(HashMap<String, Valor>),
+    /// Encapsula el Archivo donde se debe persistir la base de datos
     ArchivoAPersistir(String),
+    /// Cierra el hilo donde se esta ejecutando el PersistidorHandler
     Cerrar,
 }
 
+/// Entidad que se encarga de correr en un hilo y persistir la base de datos a traves de mensajes con el Persistidor
 pub struct PersistidorHandler {
     archivo: String,
     intervalo: Duration,
@@ -31,6 +35,13 @@ pub struct PersistidorHandler {
 }
 
 impl PersistidorHandler {
+    /// Instancia un manejador listo para recibir mensajes
+    ///
+    /// # Argumentos
+    ///
+    /// * `archivo` - string donde se va a persistir la base de datos
+    /// * `intervalo` - intervalo de tiempo a traves del cual se va a persistir
+    /// * `receptor` - Receiver de mensajes asociado al channel del Persistidor
     pub fn new(archivo: String, intervalo: u64, receptor: Receiver<MensajePersistencia>) -> Self {
         PersistidorHandler {
             archivo,
@@ -40,6 +51,16 @@ impl PersistidorHandler {
         }
     }
 
+    /// Ejecuta al manejador esperando mensajes
+    ///
+    /// ```no_run
+    /// let (tx_pers, rx_pers) = channel();
+    /// let mut pers_handler = PersistidorHandler::new(config.dbfilename(), 1, rx_pers);
+    ///
+    /// let hilo_pers = thread::spawn(move || {
+    ///     pers_handler.persistir();
+    /// });
+    /// ```
     pub fn persistir(&mut self) {
         while let Ok(mensaje) = self.receptor.recv() {
             match mensaje {
@@ -70,11 +91,18 @@ impl PersistidorHandler {
     }
 }
 
+/// Representa al mensajero que se comunica con el manejador para persistir la base de datos
+#[derive(Debug, Clone)]
 pub struct Persistidor {
     persistidor: Sender<MensajePersistencia>,
 }
 
 impl Persistidor {
+    /// Instancia un persistidor para enviar mensajes
+    ///
+    /// # Argumentos
+    ///
+    /// * `persistidor` - Sender de MensajePersistencia asociado la channel de PersistidorHandler
     pub fn new(persistidor: Sender<MensajePersistencia>) -> Self {
         Persistidor { persistidor }
     }
@@ -87,6 +115,7 @@ impl Persistidor {
         {}
     }
 
+    /// Cambia el archivo donde se persiste la base de datos
     pub fn cambiar_archivo(&self, ruta_nueva: String) {
         if self
             .persistidor
@@ -96,6 +125,15 @@ impl Persistidor {
     }
 }
 
+/// El persistidor es un observador que espera a que la base de datos notifique cuando se produjo un cambio importante
+impl Observer for Persistidor {
+    /// Al actualizarse envia la nueva base de datos a persistir
+    fn actualizar(&self, bdd: HashMap<String, Valor>) {
+        self.persistir(bdd);
+    }
+}
+
+/// Crea una cadena con una codificacion especifica para persistir a partir de una clave y un valor
 fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>, time: Option<Duration>) -> String {
     match (valor, time) {
         (Some(TipoRedis::Str(valor)), Some(duration)) => {
@@ -153,13 +191,7 @@ fn guardar_clave_valor(clave: String, valor: Option<&TipoRedis>, time: Option<Du
 }
 
 fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) -> Result<()> {
-    let mut archivo = match OpenOptions::new()
-        .write(true)
-        //.append(true)
-        //.create_new(true)
-        .truncate(true)
-        .open(archivo)
-    {
+    let mut archivo = match OpenOptions::new().write(true).create(true).open(archivo) {
         Ok(a) => a,
         Err(e) => return Err(e),
     };
@@ -172,20 +204,89 @@ fn guardar_en_archivo(archivo: &str, instrucciones: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-#[allow(dead_code)]
-fn cargar_en_vector(archivo: &str) -> Result<Vec<String>> {
-    let mut vector: Vec<String> = vec![];
-    let file = match File::open(archivo) {
-        Ok(a) => a,
-        Err(e) => return Err(e),
+/// Lee el archivo de persistencia y crea una nuevo hashmap a partir de el
+pub fn levantar_tabla(archivo_persistencia: String) -> HashMap<String, Valor> {
+    let mut hashmap = HashMap::<String, Valor>::new();
+
+    let archivo = match File::open(archivo_persistencia) {
+        Ok(archivo) => archivo,
+        Err(_) => return hashmap,
     };
 
-    let reader = BufReader::new(file);
+    let reader = BufReader::new(archivo);
+    let mut lineas = reader.lines();
+    while let Some(Ok(line)) = lineas.next() {
+        if line.is_empty() {
+            continue;
+        }
+        let mut elemento: Vec<&str> = line.split(':').collect();
 
-    for linea in reader.lines().flatten() {
-        vector.push(linea);
+        if elemento.contains(&"STRING") {
+            let mut valor = Valor::no_expirable(TipoRedis::Str(elemento[2].to_string()));
+
+            if es_expirable(elemento.clone()) {
+                let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+                valor = Valor::expirable(TipoRedis::Str(elemento[2].to_string()), tiempo);
+            }
+            hashmap.insert(elemento[1].to_string(), valor);
+        } else if elemento.contains(&"LIST") {
+            elemento.remove(0);
+            let clave = elemento.remove(0).to_string();
+            let mut valor = Valor::no_expirable(TipoRedis::Lista(
+                elemento.iter().map(|x| x.to_string()).collect(),
+            ));
+
+            if es_expirable(elemento.clone()) {
+                let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+
+                valor = Valor::expirable(
+                    TipoRedis::Lista(elemento.iter().map(|x| x.to_string()).collect()),
+                    tiempo,
+                );
+            }
+            hashmap.insert(clave, valor);
+        } else if elemento.contains(&"SET") {
+            elemento.remove(0);
+            let clave = elemento.remove(0).to_string();
+            let mut valor = Valor::no_expirable(TipoRedis::Set(HashSet::from_iter(
+                elemento
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            )));
+            if es_expirable(elemento.clone()) {
+                let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
+
+                valor = Valor::expirable(
+                    TipoRedis::Set(HashSet::from_iter(
+                        elemento
+                            .iter()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<String>>(),
+                    )),
+                    tiempo,
+                );
+            }
+            hashmap.insert(clave, valor);
+        } else {
+            continue;
+        }
     }
-    Ok(vector)
+    hashmap
+}
+
+fn es_expirable(parametros: Vec<&str>) -> bool {
+    parametros.contains(&"EX")
+}
+
+fn obtener_tiempo_expiracion(parametros: Vec<&str>, support: &str) -> Option<u64> {
+    match parametros.rsplit(|p| p == &support.to_string()).next() {
+        Some(c) => match c[0].parse::<u64>() {
+            Ok(num) => Some(num),
+            Err(_) => None,
+        },
+        None => None,
+    }
 }
 
 #[cfg(test)]

@@ -1,0 +1,74 @@
+@startuml
+hide circle
+skinparam classAttributeIconSize 0
+skinparam classNameBold true
+skinparam monochrome true
+skinparam roundCorner 8
+skinparam defaultFontSize 13
+skinparam classFontStyle Bold
+skinparam defaultFontName Impact
+
+class Cliente {
+    +obtener_comando(&mut self): Option<ComandoInfo>
+    +obtener_addr(&self): String;
+    +envio_informacion(&self): bool;
+    +esta_conectado(&self): bool;
+    +soporta_comando(&self, comando: &str): bool;
+}
+
+class ClienteRedis {
+    -id: Token,
+    -canales: usize,
+    -timeout: Option<Duration>,
+    -ultimo_mensaje: Instant,
+    -socket: Option<TcpStream>,
+}
+
+class ClienteHTTP {
+    -id: Token,
+    -socket: Option<TcpStream>,
+    -mando: bool,
+    -pag_index: String,
+    -icono: Vec<u8>,
+    -manejar_get(c: ComandoHTTP: Option<ComandoInfo>
+    -obtener_comando_de_post(c: ComandoHTTP): Option<ComandoInfo>
+    -manejar_error(c: ComandoHTTP): Option<ComandoInfo>
+}
+
+class Parser {
+    -lector: BufReader<R>,
+    +parsear_stream(self): Result<ComandoInfo, ParserError>
+    +parsear_respuesta(res: &ResultadoRedis) -> String
+}
+
+class HTTPParser {
+    lector: BufReader<R>,
+    +parsear_stream(self): Result<ComandoInfo, ParserError>
+    +parsear_respuesta(res: &ResultadoRedis) -> String
+}
+
+class ComandoInfo {
+    -nombre: String,
+    -parametros: Vec<String>,
+    -index: usize,
+    +get_parametro(&mut self) -> Option<String>
+}
+
+class ComandoHTTP {
+    -metodo: String,
+    -args: Vec<String>,
+    -headers: Vec<String>,
+    -comando_redis: Option<ComandoInfo>,
+    +get_metodo(&self) -> String
+    +get_comando(&self) -> Option<ComandoInfo>
+}
+
+Cliente <<Interface>>
+ClienteHTTP .up.|> Cliente
+ClienteRedis .up.|> Cliente
+ClienteRedis -left-> Parser
+ClienteHTTP -right-> HTTPParser
+Parser .down.> ComandoInfo : <<creates>>
+HTTPParser .down.> ComandoHTTP: <<creates>>
+ComandoHTTP .left.> ComandoInfo
+@enduml

@@ -1,0 +1,69 @@
+@startuml
+hide circle
+skinparam classAttributeIconSize 0
+skinparam classNameBold true
+skinparam monochrome true
+skinparam roundCorner 8
+skinparam defaultFontSize 13
+skinparam classFontStyle Bold
+skinparam defaultFontName Impact
+
+class Redis {
+     -config: Arc<Mutex<Config>>,
+     -bdd: Arc<Mutex<BaseDeDatos>>,
+     -siguiente_id: Token,
+     +iniciar(&mut self): Result<(), RedisError>
+}
+
+class Cliente {
+    +obtener_comando(&mut self): Option<ComandoInfo>
+    +obtener_addr(&self): String;
+    +envio_informacion(&self): bool;
+    +esta_conectado(&self): bool;
+}
+
+class BaseDeDatos {
+    -hashmap: HashMap<String, Valor>,
+    -observadores: Vec<Observer>,
+    +guardar_valor(&mut self, clave: String, valor: TipoRedis)
+}
+
+class ComandoHandler {
+     #argumentos: ComandoInfo
+     #a_ejecutar: Comando
+     +ejecutar(self: Box<Self>, hash_map: Arc<Mutex<BaseDeDatos>>): ResultadoRedis;
+}
+
+class ComandoInfo {
+    -nombre: String,
+    -parametros: Vec<String>
+    +get_parametro(&mut self): Option<String>
+    +descripcion(&self): String
+}
+
+class LogHandler {
+    -ruta: String,
+    -receptor: Receiver<Mensaje>,
+    +logear(&mut self)
+}
+
+class Logger {
+    log: Sender<Mensaje>,
+    +log_comando(&self, addr: String, c: ComandoInfo)
+}
+
+
+
+ComandoHandler <<Abstract>>
+Cliente <<Interface>>
+
+Redis .down.> Cliente: <<creates>>
+Redis *-right-> BaseDeDatos
+Redis .down.> ComandoHandler: "Instancia un"
+ComandoHandler .up.> BaseDeDatos
+Cliente .down.> ComandoInfo
+ComandoHandler -down-> ComandoInfo
+Redis .up.> Logger
+Redis -up-> LogHandler
+Logger -right-> LogHandler: "Se comunica con"
+@enduml

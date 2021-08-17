@@ -22,6 +22,7 @@ impl ComandoServerHandler {
             "CONFIG" => fconfig,
             "INFO" => info,
             "MONITOR" => monitor,
+            "PING" => ping,
             _ => flushdb,
         };
         ComandoServerHandler {
@@ -37,13 +38,20 @@ impl ComandoHandler for ComandoServerHandler {
         (self.a_ejecutar)(&mut self.comando, bdd, self.config)
     }
 }
-
-#[allow(dead_code)]
-pub fn es_comando_pubsub(comando: &str) -> bool {
-    let comandos = vec!["FLUSHDB", "DBSIZE", "CONFIG"];
+/// Se encarga de detectar si el comando corresponde a los implementados del tipo server
+pub fn es_comando_server(comando: &str) -> bool {
+    let comandos = vec!["FLUSHDB", "DBSIZE", "CONFIG", "INFO", "MONITOR", "PING"];
     comandos.iter().any(|&c| c == comando)
 }
 
+fn ping(
+    _comando: &mut ComandoInfo,
+    _bdd: Arc<Mutex<BaseDeDatos>>,
+    _config: Arc<Mutex<Config>>,
+) -> ResultadoRedis {
+    ResultadoRedis::StrSimple("PONG".to_string())
+}
+/// Borra todas las claves de la base de datos. Este comando nunca falla
 fn flushdb(
     _comando: &mut ComandoInfo,
     bdd: Arc<Mutex<BaseDeDatos>>,
@@ -51,11 +59,11 @@ fn flushdb(
 ) -> ResultadoRedis {
     match bdd.lock() {
         Ok(mut b) => b.borrar_claves(),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     ResultadoRedis::StrSimple("OK".to_string())
 }
-
+/// Retorna el numero de claves en la base de datos
 fn dbsize(
     _comando: &mut ComandoInfo,
     bdd: Arc<Mutex<BaseDeDatos>>,
@@ -63,11 +71,11 @@ fn dbsize(
 ) -> ResultadoRedis {
     let cantidad = match bdd.lock() {
         Ok(b) => b.cantidad_claves(),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
     ResultadoRedis::Int(cantidad as isize)
 }
-
+/// Determina si el comando solicidado es config_set o config_get
 fn fconfig(
     comando: &mut ComandoInfo,
     bdd: Arc<Mutex<BaseDeDatos>>,
@@ -75,16 +83,20 @@ fn fconfig(
 ) -> ResultadoRedis {
     let parametro = match comando.get_parametro() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for fconfig command".to_string(),
+            )
+        }
     };
 
-    match parametro.as_str() {
+    match parametro.to_uppercase().as_str() {
         "GET" => config_get(comando, bdd, config),
         "SET" => config_set(comando, bdd, config),
-        _ => ResultadoRedis::Error("Opcion de config no encontrada".to_string()),
+        _ => ResultadoRedis::Error("ERR Opcion config not found".to_string()),
     }
 }
-
+/// El comando CONFIG GET se utiliza para leer los parámetros de configuración de un servidor en ejecución
 fn config_get(
     comando: &mut ComandoInfo,
     _bdd: Arc<Mutex<BaseDeDatos>>,
@@ -92,12 +104,16 @@ fn config_get(
 ) -> ResultadoRedis {
     let parametro = match comando.get_parametro() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for config_set command".to_string(),
+            )
+        }
     };
 
     let valores = match config.lock() {
         Ok(c) => c.get(&parametro),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la configuracion".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing config".to_string()),
     };
 
     ResultadoRedis::Vector(
@@ -107,7 +123,7 @@ fn config_get(
             .collect(),
     )
 }
-
+/// El comando CONFIG SET se utiliza para reconfigurar un servidor en tiempo de ejecución sin necesidad de reiniciarlo
 fn config_set(
     comando: &mut ComandoInfo,
     _bdd: Arc<Mutex<BaseDeDatos>>,
@@ -115,17 +131,21 @@ fn config_set(
 ) -> ResultadoRedis {
     let (parametro, valor) = match (comando.get_parametro(), comando.get_parametro()) {
         (Some(p), Some(v)) => (p, v),
-        _ => return ResultadoRedis::Error("Parametro no encontrado".to_string()),
+        _ => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for config_get command".to_string(),
+            )
+        }
     };
 
     match config.lock() {
         Ok(mut c) => c.set(parametro, valor),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la configuracion".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing config".to_string()),
     };
 
     ResultadoRedis::StrSimple("Ok".to_string())
 }
-
+/// El comando INFO retorna información y estadísticas sobre el servidor en un formato fácil de parsear por computadores y fácil de leer por humanos
 fn info(
     _comando: &mut ComandoInfo,
     bdd: Arc<Mutex<BaseDeDatos>>,
@@ -137,7 +157,7 @@ fn info(
             v.append(&mut b.info());
             v
         }
-        _ => return ResultadoRedis::Error("Error al acceder a la informacion".to_string()),
+        _ => return ResultadoRedis::Error("ERR when accessing info".to_string()),
     };
 
     ResultadoRedis::Vector(
@@ -146,7 +166,7 @@ fn info(
             .collect(),
     )
 }
-
+/// Es un comando de depuración que imprime al cliente cada comando procesado por el servidor. Puede ayudar entender qué está sucediendo en la base de datos
 fn monitor(
     _comando: &mut ComandoInfo,
     _bdd: Arc<Mutex<BaseDeDatos>>,

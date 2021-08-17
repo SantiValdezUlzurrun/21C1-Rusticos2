@@ -1,6 +1,7 @@
 use std::option::Option;
 
 #[derive(Debug, Clone)]
+/// Estructura que encapsula los parametros necesarios para ejecutar un comando
 pub struct ComandoInfo {
     nombre: String,
     parametros: Vec<String>,
@@ -8,16 +9,21 @@ pub struct ComandoInfo {
 }
 
 impl ComandoInfo {
+    /// Instancia un comando redis en condiciones de obtener sus valores
+    ///
+    /// # Argumentos
+    ///
+    /// * `comando` - comando redis parseado
     pub fn new(mut comando_parseado: Vec<String>) -> Self {
         if comando_parseado.len() == 1 {
             return ComandoInfo {
-                nombre: comando_parseado[0].clone(),
+                nombre: comando_parseado[0].to_uppercase(),
                 parametros: vec![],
                 index: 0,
             };
         }
 
-        let nombre = comando_parseado[0].clone();
+        let nombre = comando_parseado[0].to_uppercase();
         comando_parseado.remove(0);
         ComandoInfo {
             nombre,
@@ -26,9 +32,12 @@ impl ComandoInfo {
         }
     }
 
+    /// Nombre del comando
     pub fn get_nombre(&self) -> String {
         self.nombre.clone()
     }
+
+    /// Clave a la que afecta el comando
     pub fn get_clave(&mut self) -> Option<String> {
         self.index = 1;
         self.parametros
@@ -36,14 +45,26 @@ impl ComandoInfo {
             .as_ref()
             .map(|clave| clave.to_string())
     }
-
+    /// Devuelve una lista con todos los parametros del comando
     pub fn get_parametros(&self) -> Option<Vec<String>> {
         if !self.parametros.is_empty() {
             return Some(self.parametros.clone());
         }
         None
     }
-
+    /// Devuelve iterativamente los parametros. Cuando ya no quedan parametros devuelve None
+    ///
+    ///# Examples
+    ///
+    /// ```
+    /// COMANDO : LPUSH LISTA 1 2 3 4 5
+    ///
+    /// comando_info.get_parametros()
+    /// > LISTA
+    /// comando_info.get_parametros()
+    /// > 1
+    /// ...
+    /// ```
     pub fn get_parametro(&mut self) -> Option<String> {
         if self.index < self.parametros.len() {
             let a_devolver = &self.parametros[self.index];
@@ -52,13 +73,13 @@ impl ComandoInfo {
         };
         None
     }
-
+    /// Devuelve un string con una representacion visual del comando
     pub fn descripcion(&self) -> String {
         let mut descripcion = self.nombre.clone();
 
         for param in self.parametros.iter() {
             descripcion += " ";
-            descripcion += &param;
+            descripcion += param;
         }
         descripcion
     }

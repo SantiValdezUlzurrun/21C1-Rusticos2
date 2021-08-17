@@ -4,6 +4,7 @@ use crate::comando_info::ComandoInfo;
 use std::iter::FromIterator;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+/// Manejador de comando del tipo key
 pub struct ComandoKeyHandler {
     comando: ComandoInfo,
     a_ejecutar: Comando,
@@ -37,7 +38,7 @@ impl ComandoHandler for ComandoKeyHandler {
         (self.a_ejecutar)(&mut self.comando, bdd)
     }
 }
-
+/// Se encarga de detectar si el comando corresponde a los implementados del tipo key
 pub fn es_comando_key(comando: &str) -> bool {
     let comandos = vec![
         "COPY", "DEL", "EXISTS", "RENAME", "EXPIRE", "EXPIREAT", "PERSIST", "TTL", "TOUCH", "KEYS",
@@ -46,16 +47,23 @@ pub fn es_comando_key(comando: &str) -> bool {
     comandos.iter().any(|&c| c == comando)
 }
 
+/// Copia el valor almacenado en una clave origen a una clave destino
 fn copy(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'copy' command".to_string(),
+            )
+        }
     };
 
     let parametro = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'copy' command".to_string(),
+            )
         }
     };
     match bdd.lock() {
@@ -63,20 +71,22 @@ fn copy(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
             Some(_) => ResultadoRedis::Int(1),
             None => ResultadoRedis::Int(0),
         },
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Renombra una clave a un nuevo nombre de clave
 fn rename(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'rename' command".to_string(),
+            )
+        }
     };
     let clon = Arc::clone(&bdd);
     match copy(comando, bdd) {
-        ResultadoRedis::Error(_) => {
-            ResultadoRedis::Error("ErrorRename clave no encontrada".to_string())
-        }
+        ResultadoRedis::Error(_) => ResultadoRedis::Error("ERR no such key".to_string()),
         _ => {
             let vector = vec!["rename".to_string(), clave];
             let mut comando = ComandoInfo::new(vector);
@@ -85,11 +95,15 @@ fn rename(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         }
     }
 }
-
+/// Retorna un string que representa el tipo de valor almacenado en una clave. Los tipos que puede retornar son: string, list, set (no consideramos los tipos de datos que no se implementan en el proyecto)
 fn tipo(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'type' command".to_string(),
+            )
+        }
     };
     match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&clave) {
@@ -98,7 +112,7 @@ fn tipo(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
             Some(TipoRedis::Set(_)) => ResultadoRedis::BulkStr("set".to_string()),
             _ => ResultadoRedis::BulkStr("none".to_string()),
         },
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
 
@@ -117,14 +131,12 @@ fn recorrer_y_ejecutar(
                     claves_eliminadas += 1;
                 }
             }
-            Err(_) => {
-                return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
-            }
+            Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
         };
     }
     ResultadoRedis::Int(claves_eliminadas)
 }
-
+/// Elimina una clave específica. La clave es ignorada si no existe
 fn del(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let _clon = Arc::clone(&bdd);
     recorrer_y_ejecutar(
@@ -135,47 +147,67 @@ fn del(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
         }),
     )
 }
-
+/// Retorna si la clave existe
 fn exists(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     recorrer_y_ejecutar(comando, bdd, Box::new(|_, _| {}))
 }
-
+/// Configura un tiempo de expiración sobre una clave (la clave se dice que es volátil). Luego de ese tiempo de expiración, la clave es automáticamente eliminada
 fn expire(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'expire' command".to_string(),
+            )
+        }
     };
 
     let parametro: u64 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(t) => t,
-            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'expire' command".to_string(),
+            )
         }
     };
     match bdd.lock() {
         Ok(mut bdd) => {
             ResultadoRedis::Int(bdd.actualizar_valor_con_expiracion(clave, parametro) as isize)
         }
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Tiene el mismo efecto que EXPIRE, pero en lugar de indicar el número de segundos que representa el TTL (time to live), toma el tiempo absoluto en el timestamp de Unix (segundos desde el 1ro de enero de 1970)
 fn expireat(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'expireat' command".to_string(),
+            )
+        }
     };
 
     let parametro: u64 = match comando.get_parametro() {
         Some(p) => match p.parse() {
             Ok(t) => t,
-            Err(_) => return ResultadoRedis::Error("WrongType parametro no numerico".to_string()),
+            Err(_) => {
+                return ResultadoRedis::Error(
+                    "ERR value is not an integer or out of range".to_string(),
+                )
+            }
         },
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'expireat' command".to_string(),
+            )
         }
     };
 
@@ -183,39 +215,49 @@ fn expireat(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
     let tiempo_a_esperar = match tiempo_desde_epoch.duration_since(SystemTime::now()) {
         Ok(d) => d,
         Err(_) => {
-            return ResultadoRedis::Error("TimeError el tiempo desde epoch ya sucedio".to_string())
+            return ResultadoRedis::Error(
+                "TimeError the time since epoch has already happened".to_string(),
+            )
         }
     };
     match bdd.lock() {
         Ok(mut bdd) => ResultadoRedis::Int(
             bdd.actualizar_valor_con_expiracion(clave, tiempo_a_esperar.as_secs()) as isize,
         ),
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Elimina el tiempo de expiración existente en una clave, tornando una clave volátil en persistente (una clave que no expira, dado que no tiene timeout asociado)
 fn persist(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'persist' command".to_string(),
+            )
+        }
     };
     match bdd.lock() {
         Ok(mut bdd) => ResultadoRedis::Int(bdd.actualizar_valor_sin_expiracion(clave) as isize),
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Retorna el tiempo que le queda a una clave para que se cumpla su timeout. Permite a un cliente Redis conocer cuántos segundos le quedan a una clave como parte del dataset
 fn ttl(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
-        None => return ResultadoRedis::Error("ClaveError no se encontro una clave".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'ttl' command".to_string(),
+            )
+        }
     };
     match bdd.lock() {
         Ok(bdd) => ResultadoRedis::Int(bdd.obtener_expiracion(&clave) as isize),
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Actualiza el valor de último acceso a la clave
 fn touch(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let mut acum = 0;
     match bdd.lock() {
@@ -225,21 +267,23 @@ fn touch(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRe
             }
             ResultadoRedis::Int(acum)
         }
-        Err(_) => ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Retorna todas las claves que hacen match con un patrón
 fn keys(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let re = match comando.get_parametro() {
         Some(p) => p,
         None => {
-            return ResultadoRedis::Error("ParametroError no se envio el parametro".to_string())
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'keys' command".to_string(),
+            )
         }
     };
 
     let vector: Vec<String> = match bdd.lock() {
         Ok(bdd) => bdd.claves(&re),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
 
     ResultadoRedis::Vector(
@@ -293,7 +337,7 @@ fn selecionar_rango(parametros: Vec<String>, valores: Vec<String>) -> Option<Vec
 
     Some(valores[index_min..=index_max].to_vec())
 }
-
+/// Se encarga de ordenar la lista/set en funcion de los mismos elementos
 fn sort_elemento_con_pesos_interno(
     mut valores: Vec<String>,
     parametros: Vec<String>,
@@ -329,7 +373,7 @@ fn obetener_tupla_valor_peso(
 
             if indice_peso == indice_valor {
                 let peso = match bdd.lock() {
-                    Ok(bdd) => match bdd.obtener_valor(&peso) {
+                    Ok(bdd) => match bdd.obtener_valor(peso) {
                         Some(TipoRedis::Str(peso)) => peso.clone(),
                         _ => return None,
                     },
@@ -341,7 +385,7 @@ fn obetener_tupla_valor_peso(
     }
     Some(tuplas)
 }
-
+/// Se encarga de los hiperparametros del comando sort (DESC/LIMIT/STORE)
 fn sort_configuracion_lista_ordenada(
     parametros: Vec<String>,
     mut valores: Vec<String>,
@@ -354,14 +398,14 @@ fn sort_configuracion_lista_ordenada(
     if parametros.contains(&"LIMIT".to_string()) {
         valores = match selecionar_rango(parametros.clone(), valores) {
             Some(r) => r,
-            None => return ResultadoRedis::Error("ERR in sort limit offset count".to_string()),
+            None => return ResultadoRedis::Error("ERR syntax error".to_string()),
         };
     }
 
     if parametros.contains(&"STORE".to_string()) {
         let clave = match parametros.rsplit(|p| p == &"STORE".to_string()).next() {
             Some(c) => &c[0],
-            None => return ResultadoRedis::Error("ERR en sort store clave".to_string()),
+            None => return ResultadoRedis::Error("ERR syntax error".to_string()),
         };
         let tamanio = valores.len();
         match bdd.lock() {
@@ -369,9 +413,7 @@ fn sort_configuracion_lista_ordenada(
                 bdd.guardar_valor(clave.to_string(), TipoRedis::Lista(valores));
                 return ResultadoRedis::StrSimple(tamanio.to_string());
             }
-            Err(_) => {
-                return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
-            }
+            Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
         }
     }
     ResultadoRedis::Vector(
@@ -381,7 +423,7 @@ fn sort_configuracion_lista_ordenada(
             .collect::<Vec<ResultadoRedis>>(),
     )
 }
-
+/// Se encarga de ordenar la lista/set en funcion de pesos externos a lista/set tambien almacenados en la base de datos
 fn sort_elemento_con_pesos_externos(
     valores: Vec<String>,
     parametros: Vec<String>,
@@ -389,11 +431,11 @@ fn sort_elemento_con_pesos_externos(
 ) -> ResultadoRedis {
     let patron_pesos = match parametros.rsplit(|p| p == &"BY".to_string()).next() {
         Some(c) => &c[0],
-        None => return ResultadoRedis::Error("ERR en sort patron pesos externos".to_string()),
+        None => return ResultadoRedis::Error("ERR syntax error".to_string()),
     };
     let pesos = match bdd.lock() {
         Ok(bdd) => bdd.claves(patron_pesos),
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     };
 
     if pesos.len() != valores.len() {
@@ -406,9 +448,7 @@ fn sort_elemento_con_pesos_externos(
     }
     let mut tuplas = match obetener_tupla_valor_peso(valores, pesos, bdd.clone()) {
         Some(t) => t,
-        None => {
-            return ResultadoRedis::Error("Error al encontrar el peso externo en sort".to_string())
-        }
+        None => return ResultadoRedis::Error("ERR syntax error".to_string()),
     };
 
     tuplas.sort_by(|a, b| a.1.cmp(&b.1));
@@ -416,16 +456,12 @@ fn sort_elemento_con_pesos_externos(
     if parametros.contains(&"GET".to_string()) {
         let patron_obj = match parametros.rsplit(|p| p == &"GET".to_string()).next() {
             Some(c) => &c[0],
-            None => {
-                return ResultadoRedis::Error("ERR en sort by patron objetos externos".to_string())
-            }
+            None => return ResultadoRedis::Error("ERR syntax error".to_string()),
         };
 
         let objetos = match bdd.lock() {
             Ok(bdd) => bdd.claves(patron_obj),
-            Err(_) => {
-                return ResultadoRedis::Error("Error al acceder a la base de datos".to_string())
-            }
+            Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
         };
         let mut resultado: Vec<ResultadoRedis> = vec![];
         let mut pusheado = false;
@@ -434,14 +470,14 @@ fn sort_elemento_con_pesos_externos(
                 if objeto.contains(&valor.0) {
                     match bdd.lock() {
                         Ok(bdd) => {
-                            if let Some(TipoRedis::Str(valor)) = bdd.obtener_valor(&objeto) {
+                            if let Some(TipoRedis::Str(valor)) = bdd.obtener_valor(objeto) {
                                 pusheado = true;
                                 resultado.push(ResultadoRedis::StrSimple(valor.to_string()))
                             }
                         }
                         Err(_) => {
                             return ResultadoRedis::Error(
-                                "Error al acceder a la base de datos".to_string(),
+                                "ERR when accessing the database".to_string(),
                             )
                         }
                     }
@@ -461,11 +497,15 @@ fn sort_elemento_con_pesos_externos(
 
     sort_configuracion_lista_ordenada(parametros, resultado, bdd)
 }
-
+/// Retorna los elementos contenidos en la lista o set, ordenados por la clave
 fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let parametros = match comando.get_parametros() {
         Some(p) => p,
-        None => return ResultadoRedis::Error("ParametroError no hay parametros".to_string()),
+        None => {
+            return ResultadoRedis::Error(
+                "ERR wrong number of arguments for 'sort' command".to_string(),
+            )
+        }
     };
     let valores = match bdd.lock() {
         Ok(bdd) => match bdd.obtener_valor(&parametros[0]) {
@@ -475,9 +515,13 @@ fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
                 .map(|x| x.to_string())
                 .collect::<Vec<String>>(),
             None => return ResultadoRedis::Vector(vec![]),
-            _ => return ResultadoRedis::Error("WRONGTYPE".to_string()),
+            _ => {
+                return ResultadoRedis::Error(
+                    "WRONGTYPE Operation against a key holding the wrong kind of value".to_string(),
+                )
+            }
         },
-        Err(_) => return ResultadoRedis::Error("Error al acceder a la base de datos".to_string()),
+        Err(_) => return ResultadoRedis::Error("ERR when accessing the databases".to_string()),
     };
 
     if valores.is_empty() {
@@ -501,7 +545,7 @@ mod tests {
 
     #[test]
     fn copy_copia_el_valor_de_una_clave_en_otra() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
 
         let ptr_arc = Arc::new(Mutex::new(data_base));
@@ -527,7 +571,7 @@ mod tests {
 
     #[test]
     fn copy_copiar_una_clave_que_no_existe_devuelve_un_error() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
         let ptr_arc = Arc::new(Mutex::new(data_base));
 
         let comando = vec![
@@ -541,7 +585,7 @@ mod tests {
 
     #[test]
     fn del_elimina_las_claves_guardadas_en_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -564,7 +608,7 @@ mod tests {
 
     #[test]
     fn del_trata_de_elimina_las_claves_que_no_estan_guardadas_en_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -587,7 +631,7 @@ mod tests {
 
     #[test]
     fn del_elimina_las_claves_repetidas_que_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -610,7 +654,7 @@ mod tests {
 
     #[test]
     fn existis_chequea_las_claves_guardadas_en_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -633,7 +677,7 @@ mod tests {
 
     #[test]
     fn existis_chequea_las_claves_repetidas_que_de_la_base_de_datos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("1".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("2".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("3".to_string(), TipoRedis::Lista(Vec::new()));
@@ -656,7 +700,7 @@ mod tests {
 
     #[test]
     fn rename_cambia_modifica_la_clave_pedida() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
 
         let ptr_arc = Arc::new(Mutex::new(data_base));
@@ -684,7 +728,7 @@ mod tests {
 
     #[test]
     fn tipo_devuelve_el_tipo_del_valor_almacenado_con_esa_clave() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("string".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("lista".to_string(), TipoRedis::Lista(Vec::new()));
         data_base.guardar_valor("set".to_string(), TipoRedis::Set(HashSet::new()));
@@ -725,7 +769,7 @@ mod tests {
     #[test]
     fn expire_cuando_se_crea_una_clave_no_expirable_y_se_la_pasa_a_volatil_esta_expira_correctamente(
     ) {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
         let ptr = Arc::new(Mutex::new(data_base));
 
@@ -747,7 +791,7 @@ mod tests {
 
     #[test]
     fn keys_si_se_ingresa_la_siguiente_re_el_resultado_es_el_correcto() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("hello".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("hallo".to_string(), TipoRedis::Str("valor".to_string()));
         data_base.guardar_valor("hillo".to_string(), TipoRedis::Str("valor".to_string()));
@@ -764,7 +808,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_numericos_en_una_lista() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -789,7 +833,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_alphanumerico_en_una_lista() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -820,7 +864,7 @@ mod tests {
 
     #[test]
     fn sort_devuelve_un_error_si_no_esta_el_parametro_alpha_en_una_lista_de_palabras() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -843,7 +887,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_si_esta_el_parametro_alpha_en_una_lista_de_palabras() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -875,7 +919,7 @@ mod tests {
     #[test]
     fn sort_ordena_los_elementos_en_orden_descendiente_en_una_lista_de_numeros_si_esta_la_clave_desc(
     ) {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -904,7 +948,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_el_rango_pedido() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -933,7 +977,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_otro_rango() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -966,7 +1010,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_rango_uno() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -996,7 +1040,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_de_numeros_con_rango_menos_uno_menos_diez() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -1029,7 +1073,7 @@ mod tests {
 
     #[test]
     fn sort_devuelve_una_lista_vacia_si_el_valor_no_existes() {
-        let data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let data_base = BaseDeDatos::new();
         let mut comando = ComandoInfo::new(vec![
             "sort".to_string(),
             "mylist".to_string(),
@@ -1043,7 +1087,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_con_pesos_externos() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("peso_2".to_string(), TipoRedis::Str("2".to_string()));
         data_base.guardar_valor("peso_3".to_string(), TipoRedis::Str("3".to_string()));
         data_base.guardar_valor("peso_4".to_string(), TipoRedis::Str("4".to_string()));
@@ -1080,7 +1124,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_con_pesos_externos_faltantes() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("peso_3".to_string(), TipoRedis::Str("3".to_string()));
         data_base.guardar_valor("peso_4".to_string(), TipoRedis::Str("4".to_string()));
         data_base.guardar_valor("peso_5".to_string(), TipoRedis::Str("5".to_string()));
@@ -1116,7 +1160,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_en_una_lista_con_todos_pesos_externos_faltantes() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor(
             "mylist".to_string(),
             TipoRedis::Lista(vec![
@@ -1148,7 +1192,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_los_elementos_y_devuelve_los_objetos_que_representan_las_ids() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("peso_1".to_string(), TipoRedis::Str("1".to_string()));
         data_base.guardar_valor("peso_2".to_string(), TipoRedis::Str("2".to_string()));
         data_base.guardar_valor("peso_3".to_string(), TipoRedis::Str("3".to_string()));
@@ -1203,7 +1247,7 @@ mod tests {
 
     #[test]
     fn sort_ordena_por_pesos_externos_los_elementos_los_guarda_con_la_clave_dada() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("peso_1".to_string(), TipoRedis::Str("1".to_string()));
         data_base.guardar_valor("peso_2".to_string(), TipoRedis::Str("2".to_string()));
         data_base.guardar_valor("peso_3".to_string(), TipoRedis::Str("3".to_string()));

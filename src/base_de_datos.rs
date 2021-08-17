@@ -1,20 +1,14 @@
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
-
-use std::iter::FromIterator;
+use crate::observer::{Observable, Observer};
 
 use crate::canal::Canal;
-use crate::persistencia::{MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::valor::Valor;
 
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{channel, Sender};
-use std::thread;
-use std::thread::JoinHandle;
 
 #[derive(Debug, PartialEq)]
+
+/// Los posibles resultados que puede devolver un comando
 pub enum ResultadoRedis {
     StrSimple(String),
     BulkStr(String),
@@ -22,38 +16,39 @@ pub enum ResultadoRedis {
     Vector(Vec<ResultadoRedis>),
     Nil,
     Error(String),
+    Vacio,
 }
 
 #[derive(Debug, PartialEq, Clone)]
+/// Los posibles tipos de datos que maneja el servidor redis
 pub enum TipoRedis {
     Str(String),
     Lista(Vec<String>),
     Set(HashSet<String>),
     Canal(Canal),
 }
-
+/// Base de datos donde se almacenan todos los elementos almacenados
 pub struct BaseDeDatos {
     hashmap: HashMap<String, Valor>,
-    persistidor: Persistidor,
-    hilo: Option<JoinHandle<()>>,
-    tx: Sender<MensajePersistencia>,
+    observadores: Vec<Box<dyn Observer + Send>>,
 }
 
 impl BaseDeDatos {
+    /// Devuelve el valor que corresponde a la clave enviada por parametro
     pub fn obtener_valor(&self, clave: &str) -> Option<&TipoRedis> {
         match self.hashmap.get(clave) {
             Some(v) => v.get(),
             None => None,
         }
     }
-
+    /// Devuelve el tiempo de expiracion de una clave almacenada en la base de datos
     pub fn obtener_expiracion(&self, clave: &str) -> isize {
         match self.hashmap.get(clave) {
             Some(v) => v.obtener_expiracion(),
             None => -2,
         }
     }
-
+    /// Guarda una valor con un tiempo de expiracion enviado por parametro
     pub fn guardar_valor_con_expiracion(
         &mut self,
         clave: String,
@@ -62,10 +57,15 @@ impl BaseDeDatos {
     ) {
         self.hashmap
             .insert(clave, Valor::expirable(valor, expiracion));
-
-        self.persistirse();
+        self.notificar_observadores(self.hashmap.clone());
     }
-
+    /// Dada una clave con expiracion almacenada en la base de datos, actualiza su 'tiempo de vida' con el parametro 'expiracion'
+    /// # Arguments
+    ///
+    /// * `self` - Referencia a la bases de datos
+    /// * `clave` - Clave con la que se identifica un elemento almacenado en la base de datos
+    /// * `expiracion` - Nuevo valor de expiracion de la clave
+    ///
     pub fn actualizar_valor_con_expiracion(&mut self, clave: String, expiracion: u64) -> usize {
         match self.hashmap.get_mut(&clave) {
             Some(v) => {
@@ -89,7 +89,7 @@ impl BaseDeDatos {
     pub fn guardar_valor(&mut self, clave: String, valor: TipoRedis) {
         self.hashmap.insert(clave, Valor::no_expirable(valor));
 
-        self.persistirse();
+        self.notificar_observadores(self.hashmap.clone());
     }
 
     pub fn guardar_valores(&mut self, parametros: Vec<String>) {
@@ -105,6 +105,7 @@ impl BaseDeDatos {
 
             index += 1;
         }
+        self.notificar_observadores(self.hashmap.clone());
     }
 
     pub fn existe_clave(&mut self, clave: &str) -> bool {
@@ -119,10 +120,16 @@ impl BaseDeDatos {
             Some(_) => 1,
             None => 0,
         };
-        self.persistirse();
+        self.notificar_observadores(self.hashmap.clone());
         valor
     }
-
+    /// Dado un valor ya almacenado en la base de datos, lo copia en una nueva clave
+    /// # Arguments
+    ///
+    /// * `self` - Referencia a la bases de datos
+    /// * `clave_actual` - Clave almacenada en la base de datos
+    /// * `clave_nueva` - Nuevo clave
+    ///
     pub fn copiar_valor(&mut self, clave_actual: &str, clave_nueva: &str) -> Option<()> {
         let valor = match self.obtener_valor(clave_actual) {
             None => return None,
@@ -142,7 +149,12 @@ impl BaseDeDatos {
             None => 0,
         }
     }
-
+    /// Devuelve todas las claves que matchean con un patron
+    /// # Arguments
+    ///
+    /// * `self` - Referencia a la bases de datos
+    /// * `re` - Patron de referencia
+    ///
     pub fn claves(&self, re: &str) -> Vec<String> {
         let regex = match Regex::new(re) {
             Ok(r) => r,
@@ -156,7 +168,7 @@ impl BaseDeDatos {
             .filter(|c| regex.is_match(c))
             .collect()
     }
-
+    /// Dado un elemento de tipo string, lo actulaliza con un nuevo valor
     pub fn intercambiar_valor(
         &mut self,
         clave: String,
@@ -173,7 +185,7 @@ impl BaseDeDatos {
         self.hashmap.insert(clave, Valor::no_expirable(valor_nuevo));
         valor
     }
-
+    /// Devuelve una lista con todos los canales activos de la base de datos
     pub fn canales_activos(&self, re: &str) -> Vec<String> {
         let mut canales: Vec<String> = Vec::new();
         let claves = self.claves(re);
@@ -192,7 +204,7 @@ impl BaseDeDatos {
     pub fn borrar_claves(&mut self) {
         self.hashmap = HashMap::new();
 
-        self.persistirse();
+        self.notificar_observadores(self.hashmap.clone());
     }
 
     pub fn cantidad_claves(&self) -> usize {
@@ -208,148 +220,43 @@ impl BaseDeDatos {
         info
     }
 
-    pub fn cambiar_archivo(&self, ruta_nueva: String) {
-        self.persistidor.cambiar_archivo(ruta_nueva);
-    }
-
-    fn persistirse(&self) {
-        self.persistidor.persistir(self.hashmap.clone());
-    }
-
     #[allow(dead_code)]
-    pub fn new(archivo_persistencia: String) -> Self {
-        let (tx, rx) = channel();
-        let mut handler = PersistidorHandler::new(archivo_persistencia, 1, rx);
-
-        let hilo_persistencia = thread::spawn(move || {
-            handler.persistir();
-        });
-
+    pub fn new() -> Self {
         BaseDeDatos {
             hashmap: HashMap::<String, Valor>::new(),
-            persistidor: Persistidor::new(tx.clone()),
-            hilo: Option::Some(hilo_persistencia),
-            tx,
+            observadores: vec![],
         }
     }
-    pub fn new_con_persistencia(archivo_persistencia: String) -> Self {
-        let (tx, rx) = channel();
-        let mut handler = PersistidorHandler::new(archivo_persistencia.clone(), 1, rx);
 
-        let hilo_persistencia = thread::spawn(move || {
-            handler.persistir();
-        });
-
-        let mut hashmap = HashMap::<String, Valor>::new();
-
-        let archivo = match File::open(archivo_persistencia) {
-            Ok(archivo) => archivo,
-            Err(_) => {
-                return BaseDeDatos {
-                    hashmap: HashMap::new(),
-                    persistidor: Persistidor::new(tx.clone()),
-                    hilo: Option::Some(hilo_persistencia),
-                    tx,
-                }
-            }
-        };
-
-        let reader = BufReader::new(archivo);
-        let mut lineas = reader.lines();
-        while let Some(Ok(line)) = lineas.next() {
-            if line.is_empty() {
-                continue;
-            }
-            let mut elemento: Vec<&str> = line.split(':').collect();
-
-            if elemento.contains(&"STRING") {
-                let mut valor = Valor::no_expirable(TipoRedis::Str(elemento[2].to_string()));
-
-                if es_expirable(elemento.clone()) {
-                    let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
-                    valor = Valor::expirable(TipoRedis::Str(elemento[2].to_string()), tiempo);
-                }
-                hashmap.insert(elemento[1].to_string(), valor);
-            } else if elemento.remove(0) == "LIST" {
-                let clave = elemento.remove(0).to_string();
-                let mut valor = Valor::no_expirable(TipoRedis::Lista(
-                    elemento.iter().map(|x| x.to_string()).collect(),
-                ));
-
-                if es_expirable(elemento.clone()) {
-                    let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
-
-                    valor = Valor::expirable(
-                        TipoRedis::Lista(elemento.iter().map(|x| x.to_string()).collect()),
-                        tiempo,
-                    );
-                }
-                hashmap.insert(clave, valor);
-            } else {
-                elemento.remove(0);
-                let clave = elemento.remove(0).to_string();
-                let mut valor = Valor::no_expirable(TipoRedis::Set(HashSet::from_iter(
-                    elemento
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>(),
-                )));
-                if es_expirable(elemento.clone()) {
-                    let tiempo = obtener_tiempo_expiracion(elemento.clone(), "EX").unwrap_or(0);
-
-                    valor = Valor::expirable(
-                        TipoRedis::Set(HashSet::from_iter(
-                            elemento
-                                .iter()
-                                .map(|x| x.to_string())
-                                .collect::<Vec<String>>(),
-                        )),
-                        tiempo,
-                    );
-                }
-                hashmap.insert(clave, valor);
-            }
-        }
+    pub fn new_con(tabla_persistida: HashMap<String, Valor>) -> Self {
         BaseDeDatos {
-            hashmap,
-            persistidor: Persistidor::new(tx.clone()),
-            hilo: Option::Some(hilo_persistencia),
-            tx,
+            hashmap: tabla_persistida,
+            observadores: vec![],
         }
     }
 }
 
-fn es_expirable(parametros: Vec<&str>) -> bool {
-    parametros.contains(&"EX")
-}
-fn obtener_tiempo_expiracion(parametros: Vec<&str>, support: &str) -> Option<u64> {
-    match parametros.rsplit(|p| p == &support.to_string()).next() {
-        Some(c) => match c[0].parse::<u64>() {
-            Ok(num) => Some(num),
-            Err(_) => None,
-        },
-        None => None,
+impl Observable for BaseDeDatos {
+    fn notificar_observadores(&self, bdd: HashMap<String, Valor>) {
+        self.observadores
+            .iter()
+            .for_each(|o| o.actualizar(bdd.clone()))
     }
-}
 
-impl Drop for BaseDeDatos {
-    fn drop(&mut self) {
-        if self.tx.send(MensajePersistencia::Cerrar).is_ok() {};
-
-        if let Some(hilo) = self.hilo.take() {
-            if hilo.join().is_ok() {}
-        }
+    fn agregar_observador(&mut self, o: Box<dyn Observer + Send>) {
+        self.observadores.push(o);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::thread;
     use std::time::Duration;
 
     #[test]
     fn base_de_datos_devuelve_una_copia_de_un_elemento_almacenado() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
 
         let valor = data_base.obtener_valor("clave");
@@ -358,7 +265,7 @@ mod tests {
 
     #[test]
     fn base_de_datos_elimina_valor_almacenado() {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor("clave".to_string(), TipoRedis::Str("valor".to_string()));
 
         assert!(data_base.existe_clave("clave"));
@@ -371,7 +278,7 @@ mod tests {
     #[test]
     fn si_se_guarda_una_clave_que_expira_en_1_segundo_cuando_se_la_quiere_recuperar_no_se_encuentra(
     ) {
-        let mut data_base = BaseDeDatos::new("eliminame.txt".to_string());
+        let mut data_base = BaseDeDatos::new();
         data_base.guardar_valor_con_expiracion(
             "clave".to_string(),
             1,
@@ -379,7 +286,6 @@ mod tests {
         );
 
         thread::sleep(Duration::from_secs(2));
-
         assert_eq!(None, data_base.obtener_valor("clave"));
     }
 }
