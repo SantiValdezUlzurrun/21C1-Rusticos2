@@ -20,7 +20,6 @@ pub struct ClienteHTTP {
 }
 
 impl ClienteHTTP {
-
     /// Se instancia un ClienteHTTP en condiciones de procesar mensajes
     ///
     /// # Argumentos

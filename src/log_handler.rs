@@ -155,7 +155,6 @@ pub struct Logger {
 }
 
 impl Logger {
-
     /// Instancia un Logger para enviar mensajes
     ///
     /// # Argumentos

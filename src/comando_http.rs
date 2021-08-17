@@ -9,7 +9,6 @@ pub struct ComandoHTTP {
 }
 
 impl ComandoHTTP {
-
     /// Instancia una request HTTP en condiciones de obtener sus valores
     ///
     /// # Argumentos

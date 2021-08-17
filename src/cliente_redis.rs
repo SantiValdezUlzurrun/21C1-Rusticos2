@@ -19,8 +19,6 @@ pub struct ClienteRedis {
 }
 
 impl ClienteRedis {
-
-
     /// Se instancia un ClienteRedis en condiciones de procesar mensajes
     ///
     /// # Argumentos
@@ -57,7 +55,6 @@ impl ClienteRedis {
 }
 
 impl TipoCliente for ClienteRedis {
-
     /// Encapsula el obtener el comando en particular
     ///
     /// # Resultados

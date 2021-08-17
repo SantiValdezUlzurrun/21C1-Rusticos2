@@ -22,7 +22,6 @@ pub struct Config {
 }
 
 impl Config {
-
     /// Instancia la configuracion del servidor predeterminada
     pub fn new() -> Self {
         let mut mapa_config = HashMap::new();

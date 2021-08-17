@@ -3,8 +3,8 @@ use crate::cliente::{crear_cliente, Cliente, Token};
 use crate::comando::crear_comando_handler;
 use crate::comando_info::ComandoInfo;
 use crate::log_handler::{LogHandler, Logger, Mensaje};
-use crate::persistencia::{levantar_tabla, MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::observer::Observable;
+use crate::persistencia::{levantar_tabla, MensajePersistencia, Persistidor, PersistidorHandler};
 use crate::redis_error::RedisError;
 use crate::Config;
 

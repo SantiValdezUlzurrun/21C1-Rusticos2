@@ -9,7 +9,6 @@ pub struct HTTPParser<R> {
 }
 
 impl<R: Read + std::fmt::Debug> HTTPParser<R> {
-
     /// Instancia a un parser con cualquier entidad que implemente el trait Read
     /// a partir de el se encargara de parsear
     pub fn new(stream: R) -> Self {

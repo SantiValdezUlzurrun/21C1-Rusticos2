@@ -9,7 +9,6 @@ pub struct ComandoInfo {
 }
 
 impl ComandoInfo {
-
     /// Instancia un comando redis en condiciones de obtener sus valores
     ///
     /// # Argumentos
@@ -59,7 +58,7 @@ impl ComandoInfo {
     ///
     /// ```
     /// COMANDO : LPUSH LISTA 1 2 3 4 5
-    /// 
+    ///
     /// comando_info.get_parametros()
     /// > LISTA
     /// comando_info.get_parametros()

@@ -98,7 +98,6 @@ pub struct Persistidor {
 }
 
 impl Persistidor {
-
     /// Instancia un persistidor para enviar mensajes
     ///
     /// # Argumentos

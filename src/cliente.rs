@@ -16,7 +16,6 @@ pub type Cliente = Box<dyn TipoCliente + Send>;
 
 /// Mensajes publicos que un Cliente debe implementar
 pub trait TipoCliente: ClienteClone + ClienteDebug {
-
     /// Encapsula el obtener el comando en particular
     ///
     /// # Resultados
@@ -38,7 +37,6 @@ pub trait TipoCliente: ClienteClone + ClienteDebug {
 
     /// envia un mensaje sin procesar al Cliente
     fn enviar_mensaje(&mut self, mensaje: String) -> Result<(), RedisError>;
-
 
     fn obtener_token(&self) -> Token;
 
