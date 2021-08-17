@@ -1,5 +1,6 @@
 use crate::comando_info::ComandoInfo;
 
+/// Representa una request del protocolo HTTP
 pub struct ComandoHTTP {
     metodo: String,
     args: Vec<String>,
@@ -8,6 +9,13 @@ pub struct ComandoHTTP {
 }
 
 impl ComandoHTTP {
+    /// Instancia una request HTTP en condiciones de obtener sus valores
+    ///
+    /// # Argumentos
+    ///
+    /// * `metodo` - Vector de cadenas que posee el nombre del metodo, la URI y la version del protocolo
+    /// * `headers` - headers de la request
+    /// * `comando` - comando redis obtenido de la request
     pub fn new(mut metodo: Vec<String>, _headers: Vec<String>, comando: Vec<String>) -> Self {
         ComandoHTTP {
             metodo: metodo.remove(0),

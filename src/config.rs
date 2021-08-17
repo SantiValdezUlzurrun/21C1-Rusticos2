@@ -8,10 +8,12 @@ use std::io::BufReader;
 
 use regex::Regex;
 
+/// Representa un error al leer el archivo de configuracion
 pub enum ArchivoError {
     ArchivoInexistenteError,
 }
 
+/// Entidad que encapsula la configuracion del servidor redis
 #[derive(Debug)]
 pub struct Config {
     mapa_config: HashMap<String, String>,
@@ -20,6 +22,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Instancia la configuracion del servidor predeterminada
     pub fn new() -> Self {
         let mut mapa_config = HashMap::new();
         mapa_config.insert("verbose".to_string(), "0".to_string());
@@ -80,6 +83,7 @@ impl Config {
         }
     }
 
+    /// Obtiene los items de la configuracion que matchean la expresion regular
     pub fn get(&self, re: &str) -> Vec<String> {
         let regex = match Regex::new(re) {
             Ok(r) => r,
@@ -96,10 +100,12 @@ impl Config {
         vec
     }
 
+    /// Setea un parametro de la configuracion
     pub fn set(&mut self, parametro: String, valor: String) {
         self.mapa_config.insert(parametro, valor);
     }
 
+    /// Devuelve un vector con las configuraciones del servidor
     pub fn info(&self) -> Vec<String> {
         let mut info = vec!["# Config".to_string(), "".to_string()];
         for (clave, valor) in &self.mapa_config {
@@ -113,6 +119,7 @@ impl Config {
         self.monitorear_ultimo_cliente = true;
     }
 
+    /// Actualiza la configuracion del servidor
     pub fn actualizar(&mut self, logger: &Logger, cliente: Cliente) {
         self.actualizar_log(logger, cliente);
         self.actualizar_persistencia();
@@ -139,6 +146,7 @@ impl Config {
     }
 }
 
+/// Lee un archivo de configuracion y devuelve la configuracion leida
 pub fn obtener_configuracion(ruta_archivo: String) -> Result<Config, ArchivoError> {
     let archivo = match File::open(ruta_archivo) {
         Ok(archivo) => archivo,

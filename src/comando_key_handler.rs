@@ -4,6 +4,7 @@ use crate::comando_info::ComandoInfo;
 use std::iter::FromIterator;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+/// Manejador de comando del tipo key
 pub struct ComandoKeyHandler {
     comando: ComandoInfo,
     a_ejecutar: Comando,
@@ -37,7 +38,7 @@ impl ComandoHandler for ComandoKeyHandler {
         (self.a_ejecutar)(&mut self.comando, bdd)
     }
 }
-
+/// Se encarga de detectar si el comando corresponde a los implementados del tipo key
 pub fn es_comando_key(comando: &str) -> bool {
     let comandos = vec![
         "COPY", "DEL", "EXISTS", "RENAME", "EXPIRE", "EXPIREAT", "PERSIST", "TTL", "TOUCH", "KEYS",
@@ -46,6 +47,7 @@ pub fn es_comando_key(comando: &str) -> bool {
     comandos.iter().any(|&c| c == comando)
 }
 
+/// Copia el valor almacenado en una clave origen a una clave destino
 fn copy(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -72,7 +74,7 @@ fn copy(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Renombra una clave a un nuevo nombre de clave
 fn rename(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -93,7 +95,7 @@ fn rename(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         }
     }
 }
-
+/// Retorna un string que representa el tipo de valor almacenado en una clave. Los tipos que puede retornar son: string, list, set (no consideramos los tipos de datos que no se implementan en el proyecto)
 fn tipo(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -134,7 +136,7 @@ fn recorrer_y_ejecutar(
     }
     ResultadoRedis::Int(claves_eliminadas)
 }
-
+/// Elimina una clave específica. La clave es ignorada si no existe
 fn del(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let _clon = Arc::clone(&bdd);
     recorrer_y_ejecutar(
@@ -145,11 +147,11 @@ fn del(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
         }),
     )
 }
-
+/// Retorna si la clave existe
 fn exists(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     recorrer_y_ejecutar(comando, bdd, Box::new(|_, _| {}))
 }
-
+/// Configura un tiempo de expiración sobre una clave (la clave se dice que es volátil). Luego de ese tiempo de expiración, la clave es automáticamente eliminada
 fn expire(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -182,7 +184,7 @@ fn expire(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Tiene el mismo efecto que EXPIRE, pero en lugar de indicar el número de segundos que representa el TTL (time to live), toma el tiempo absoluto en el timestamp de Unix (segundos desde el 1ro de enero de 1970)
 fn expireat(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -225,7 +227,7 @@ fn expireat(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Elimina el tiempo de expiración existente en una clave, tornando una clave volátil en persistente (una clave que no expira, dado que no tiene timeout asociado)
 fn persist(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -240,7 +242,7 @@ fn persist(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultado
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Retorna el tiempo que le queda a una clave para que se cumpla su timeout. Permite a un cliente Redis conocer cuántos segundos le quedan a una clave como parte del dataset
 fn ttl(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -255,7 +257,7 @@ fn ttl(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Actualiza el valor de último acceso a la clave
 fn touch(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let mut acum = 0;
     match bdd.lock() {
@@ -268,7 +270,7 @@ fn touch(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRe
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Retorna todas las claves que hacen match con un patrón
 fn keys(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let re = match comando.get_parametro() {
         Some(p) => p,
@@ -335,7 +337,7 @@ fn selecionar_rango(parametros: Vec<String>, valores: Vec<String>) -> Option<Vec
 
     Some(valores[index_min..=index_max].to_vec())
 }
-
+/// Se encarga de ordenar la lista/set en funcion de los mismos elementos
 fn sort_elemento_con_pesos_interno(
     mut valores: Vec<String>,
     parametros: Vec<String>,
@@ -383,7 +385,7 @@ fn obetener_tupla_valor_peso(
     }
     Some(tuplas)
 }
-
+/// Se encarga de los hiperparametros del comando sort (DESC/LIMIT/STORE)
 fn sort_configuracion_lista_ordenada(
     parametros: Vec<String>,
     mut valores: Vec<String>,
@@ -421,7 +423,7 @@ fn sort_configuracion_lista_ordenada(
             .collect::<Vec<ResultadoRedis>>(),
     )
 }
-
+/// Se encarga de ordenar la lista/set en funcion de pesos externos a lista/set tambien almacenados en la base de datos
 fn sort_elemento_con_pesos_externos(
     valores: Vec<String>,
     parametros: Vec<String>,
@@ -495,7 +497,7 @@ fn sort_elemento_con_pesos_externos(
 
     sort_configuracion_lista_ordenada(parametros, resultado, bdd)
 }
-
+/// Retorna los elementos contenidos en la lista o set, ordenados por la clave
 fn sort(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let parametros = match comando.get_parametros() {
         Some(p) => p,

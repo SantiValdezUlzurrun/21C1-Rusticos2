@@ -2,6 +2,7 @@ use crate::base_de_datos::ResultadoRedis;
 use crate::cliente::Cliente;
 use crate::redis_error::RedisError;
 
+/// Representa un canal donde se pueden suscribir clientes y publicar mensajes
 #[derive(Debug, PartialEq, Clone)]
 pub struct Canal {
     nombre: String,

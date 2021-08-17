@@ -30,12 +30,12 @@ impl ComandoHandler for ComandoSetHandler {
         (self.a_ejecutar)(&mut self.comando, bdd)
     }
 }
-
+/// Se encarga de detectar si el comando corresponde a los implementados del tipo set
 pub fn es_comando_set(comando: &str) -> bool {
     let comandos = vec!["SADD", "SCARD", "SISMEMBER", "SMEMBERS", "SREM"];
     comandos.iter().any(|&c| c == comando)
 }
-
+///  Agrega el elemento indicado al set de la clave especificada. Si la clave no existe, crea un set vacío para agregar el valor. Si el valor ya existía en el set, no se realiza agregado. Retorna error si el valor almacenado en la clave no es un set
 fn sadd(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,
@@ -78,7 +78,7 @@ fn aggregar_al_set(
     }
     (set.clone(), cantidad_ingresada)
 }
-
+/// Retorna la cantidad de elementos del set almacenado en la clave indicada
 fn scard(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,
@@ -100,7 +100,7 @@ fn scard(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRe
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Retorna si el elemento indicado es miembro del set indicado en la clave
 fn sismember(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,
@@ -133,7 +133,7 @@ fn sismember(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resulta
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Retorna todos los miembros del set almacenado en la clave indicada
 fn smembers(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,
@@ -161,7 +161,7 @@ fn smembers(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Elimina los miembros especificados del set almacenado en la clave indicada. Si la clave no existe, se considera como un set vacío, retornando 0. Retorna error si el valor almacenado en esa clave no es un set
 fn srem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(clave) => clave,

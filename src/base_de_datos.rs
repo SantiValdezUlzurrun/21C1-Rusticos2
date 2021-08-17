@@ -7,6 +7,8 @@ use regex::Regex;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, PartialEq)]
+
+/// Los posibles resultados que puede devolver un comando
 pub enum ResultadoRedis {
     StrSimple(String),
     BulkStr(String),
@@ -18,33 +20,35 @@ pub enum ResultadoRedis {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+/// Los posibles tipos de datos que maneja el servidor redis
 pub enum TipoRedis {
     Str(String),
     Lista(Vec<String>),
     Set(HashSet<String>),
     Canal(Canal),
 }
-
+/// Base de datos donde se almacenan todos los elementos almacenados
 pub struct BaseDeDatos {
     hashmap: HashMap<String, Valor>,
     observadores: Vec<Box<dyn Observer + Send>>,
 }
 
 impl BaseDeDatos {
+    /// Devuelve el valor que corresponde a la clave enviada por parametro
     pub fn obtener_valor(&self, clave: &str) -> Option<&TipoRedis> {
         match self.hashmap.get(clave) {
             Some(v) => v.get(),
             None => None,
         }
     }
-
+    /// Devuelve el tiempo de expiracion de una clave almacenada en la base de datos
     pub fn obtener_expiracion(&self, clave: &str) -> isize {
         match self.hashmap.get(clave) {
             Some(v) => v.obtener_expiracion(),
             None => -2,
         }
     }
-
+    /// Guarda una valor con un tiempo de expiracion enviado por parametro
     pub fn guardar_valor_con_expiracion(
         &mut self,
         clave: String,
@@ -53,10 +57,15 @@ impl BaseDeDatos {
     ) {
         self.hashmap
             .insert(clave, Valor::expirable(valor, expiracion));
-
         self.notificar_observadores(self.hashmap.clone());
     }
-
+    /// Dada una clave con expiracion almacenada en la base de datos, actualiza su 'tiempo de vida' con el parametro 'expiracion'
+    /// # Arguments
+    ///
+    /// * `self` - Referencia a la bases de datos
+    /// * `clave` - Clave con la que se identifica un elemento almacenado en la base de datos
+    /// * `expiracion` - Nuevo valor de expiracion de la clave
+    ///
     pub fn actualizar_valor_con_expiracion(&mut self, clave: String, expiracion: u64) -> usize {
         match self.hashmap.get_mut(&clave) {
             Some(v) => {
@@ -114,7 +123,13 @@ impl BaseDeDatos {
         self.notificar_observadores(self.hashmap.clone());
         valor
     }
-
+    /// Dado un valor ya almacenado en la base de datos, lo copia en una nueva clave
+    /// # Arguments
+    ///
+    /// * `self` - Referencia a la bases de datos
+    /// * `clave_actual` - Clave almacenada en la base de datos
+    /// * `clave_nueva` - Nuevo clave
+    ///
     pub fn copiar_valor(&mut self, clave_actual: &str, clave_nueva: &str) -> Option<()> {
         let valor = match self.obtener_valor(clave_actual) {
             None => return None,
@@ -134,7 +149,12 @@ impl BaseDeDatos {
             None => 0,
         }
     }
-
+    /// Devuelve todas las claves que matchean con un patron
+    /// # Arguments
+    ///
+    /// * `self` - Referencia a la bases de datos
+    /// * `re` - Patron de referencia
+    ///
     pub fn claves(&self, re: &str) -> Vec<String> {
         let regex = match Regex::new(re) {
             Ok(r) => r,
@@ -148,7 +168,7 @@ impl BaseDeDatos {
             .filter(|c| regex.is_match(c))
             .collect()
     }
-
+    /// Dado un elemento de tipo string, lo actulaliza con un nuevo valor
     pub fn intercambiar_valor(
         &mut self,
         clave: String,
@@ -165,7 +185,7 @@ impl BaseDeDatos {
         self.hashmap.insert(clave, Valor::no_expirable(valor_nuevo));
         valor
     }
-
+    /// Devuelve una lista con todos los canales activos de la base de datos
     pub fn canales_activos(&self, re: &str) -> Vec<String> {
         let mut canales: Vec<String> = Vec::new();
         let claves = self.claves(re);

@@ -34,14 +34,14 @@ impl ComandoHandler for ComandoStringHandler {
         (self.a_ejecutar)(&mut self.comando, hash_map)
     }
 }
-
+/// Se encarga de detectar si el comando corresponde a los implementados del tipo string
 pub fn es_comando_string(comando: &str) -> bool {
     let comandos = vec![
         "GET", "SET", "APPEND", "STRLEN", "INCRBY", "DECRBY", "MGET", "MSET", "GETSET", "GETDEL",
     ];
     comandos.iter().any(|&c| c == comando)
 }
-
+/// Devuelve el valor de una clave, si la clave no existe, se retorna el valor especial nil. Se retorna un error si el valor almacenado en esa clave no es un string, porque GET maneja solamente strings
 fn get(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -73,7 +73,7 @@ fn obtener_tiempo_expiracion(parametros: Vec<String>, support: &str) -> Option<u
         None => None,
     }
 }
-
+/// Setea que la clave especificada almacene el valor especificado de tipo string. Si la clave contiene un valor previo, la clave es sobreescrita, independientemente del tipo de dato contenido (descartando también el valor previo de TTL)
 fn set(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -135,7 +135,7 @@ fn set(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedi
     }
     ResultadoRedis::StrSimple("OK".to_string())
 }
-
+/// Atómicamente setea el valor a la clave deseada, y retorna el valor anterior almacenado en la clave
 fn getset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -165,7 +165,7 @@ fn getset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Si la clave ya existe y es un string, este comando agrega el valor al final del string. Si no existe, es creada con el string vacío y luego le agrega el valor deseado. En este caso es similar al comando SET
 fn append(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -202,7 +202,7 @@ fn append(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Obtiene el valor y elimina la clave. Es similar a GET, pero adicionalmente elimina la clave
 fn getdel(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -225,7 +225,7 @@ fn getdel(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         _ => ResultadoRedis::Nil,
     }
 }
-
+/// Retorna el largo del valor de tipo string almacenado en una clave. Retorna error si la clave no almacena un string
 fn strlen(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -241,7 +241,7 @@ fn strlen(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoR
         Err(_) => ResultadoRedis::Error("ERR when accessing the database".to_string()),
     }
 }
-
+/// Dado un elemento almacenado en la base de datos que puede ser casteable a un int y una funcion que opere sobre el, se aplica la funcion devolviendo otro int
 fn operar_sobre_int(
     comando: &mut ComandoInfo,
     bdd: Arc<Mutex<BaseDeDatos>>,
@@ -291,15 +291,15 @@ fn operar_sobre_int(
     }
     ResultadoRedis::BulkStr(num.to_string())
 }
-
+/// Decrementa el número almacenado en una clave por el valor deseado. Si la clave no existe, se setea en 0 antes de realizar la operación
 fn decrby(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     operar_sobre_int(comando, bdd, |a, b| a - b)
 }
-
+/// Incrementa el número almacenado en la clave en un incremento. Si la clave no existe, es seteado a 0 antes de realizar la operación. Devuelve error si la clave contiene un valor de tipo erróneo o un string que no puede ser representado como entero
 fn incrby(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     operar_sobre_int(comando, bdd, |a, b| a + b)
 }
-
+/// Retorna el valor de todas las claves especificadas. Para las claves que no contienen valor o el valor no es un string, se retorna el tipo especial nil
 fn mget(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let mut valores = vec![];
     let mut quedan_valores = true;
@@ -329,7 +329,7 @@ fn mget(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRed
     }
     ResultadoRedis::Vector(valores)
 }
-
+/// Setea las claves data a sus respectivos valores, reemplazando los valores existentes con los nuevos valores como SET. MSET es atómica, de modo que todas las claves son actualizadas a la vez. No es posible para los clientes ver que algunas claves del conjunto fueron modificadas, mientras otras no
 fn mset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let parametros = match comando.get_parametros() {
         Some(p) => p,

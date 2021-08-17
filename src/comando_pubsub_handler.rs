@@ -35,12 +35,12 @@ impl ComandoHandler for ComandoPubSubHandler {
         (self.a_ejecutar)(&mut self.comando, self.cliente, bdd)
     }
 }
-
+/// Se encarga de detectar si el comando corresponde a los implementados del tipo pubsub
 pub fn es_comando_pubsub(comando: &str) -> bool {
     let comandos = vec!["SUBSCRIBE", "UNSUBSCRIBE", "PUBLISH", "PUBSUB"];
     comandos.iter().any(|&c| c == comando)
 }
-
+/// Suscribe al cliente al canal especificado
 fn subscribe(
     comando: &mut ComandoInfo,
     cliente: Cliente,
@@ -70,7 +70,7 @@ fn subscribe(
     }
     ResultadoRedis::Vacio
 }
-
+/// Desuscribe al cliente de los canales indicados, si no se indica ninguno, lo desuscribe de todos
 fn unsubscribe(
     comando: &mut ComandoInfo,
     cliente: Cliente,
@@ -99,7 +99,7 @@ fn unsubscribe(
     }
     ResultadoRedis::Vacio
 }
-
+/// Envía (publica) un mensaje en un canal dado
 fn publish(
     comando: &mut ComandoInfo,
     _cliente: Cliente,
@@ -132,7 +132,7 @@ fn publish(
     };
     ResultadoRedis::Int(canal.publicar(mensaje) as isize)
 }
-
+/// es un comando de introspección que permite inspeccionar el estado del subsistema Pub / Sub. Está compuesto por subcomandos que se documentan por separado
 fn pubsub(
     comando: &mut ComandoInfo,
     _cliente: Cliente,
@@ -155,7 +155,7 @@ fn pubsub(
         }
     }
 }
-
+/// Muestra los canales activos actualmente . Un canal activo es un canal Pub / Sub con uno o más suscriptores (sin incluir los clientes suscritos a patrones)
 fn channels(
     comando: &mut ComandoInfo,
     _cliente: Cliente,
@@ -180,7 +180,7 @@ fn channels(
             .collect(),
     )
 }
-
+/// Devuelve el número de suscriptores (sin contar los clientes suscritos a patrones) para los canales especificados
 fn numsub(
     comando: &mut ComandoInfo,
     _cliente: Cliente,
