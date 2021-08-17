@@ -1,8 +1,8 @@
 use crate::base_de_datos::ResultadoRedis;
 use crate::cliente::{TipoCliente, Token};
-use crate::comando_http::ComandoHTTP;
+use crate::comando_http::ComandoHttp;
 use crate::comando_info::ComandoInfo;
-use crate::http_parser::{parsear_respuesta, HTTPParser};
+use crate::http_parser::{parsear_respuesta, HttpParser};
 use crate::redis_error::RedisError;
 use std::fs::{read_to_string, File};
 
@@ -11,7 +11,7 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 
 /// Representa un Cliente que se comunica utilizando el protocolo HTTP
-pub struct ClienteHTTP {
+pub struct ClienteHttp {
     id: Token,
     socket: Option<TcpStream>,
     mando: bool,
@@ -19,7 +19,7 @@ pub struct ClienteHTTP {
     icono: Vec<u8>,
 }
 
-impl ClienteHTTP {
+impl ClienteHttp {
     /// Se instancia un ClienteHTTP en condiciones de procesar mensajes
     ///
     /// # Argumentos
@@ -41,7 +41,7 @@ impl ClienteHTTP {
             Err(_) => buffer = Vec::new(),
         };
 
-        ClienteHTTP {
+        ClienteHttp {
             id,
             pag_index,
             icono: buffer,
@@ -51,7 +51,7 @@ impl ClienteHTTP {
     }
 
     /// Procesa requests Get devolviendo que no recibio ningun comando
-    fn manejar_get(&mut self, comando: ComandoHTTP) -> Result<Option<ComandoInfo>, RedisError> {
+    fn manejar_get(&mut self, comando: ComandoHttp) -> Result<Option<ComandoInfo>, RedisError> {
         if comando.get_argumento() == Some("/favicon.ico".to_string()) {
             let respuesta = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: image/gif\r\nContent-Length: {}\r\n\r\n",
@@ -83,7 +83,7 @@ impl ClienteHTTP {
     /// Obtiene el comando redis encapsulado en el ComandoHTTP
     fn obtener_comando_de_post(
         &mut self,
-        comando: ComandoHTTP,
+        comando: ComandoHttp,
     ) -> Result<Option<ComandoInfo>, RedisError> {
         match comando.get_comando() {
             Some(c) => Ok(Some(c)),
@@ -92,7 +92,7 @@ impl ClienteHTTP {
     }
 
     /// Maneja cualquier tipo de request no manejada respondiendo que no se recibio ningun comando
-    fn manejar_error(&mut self, _comando: ComandoHTTP) -> Result<Option<ComandoInfo>, RedisError> {
+    fn manejar_error(&mut self, _comando: ComandoHttp) -> Result<Option<ComandoInfo>, RedisError> {
         let respuesta = "HTTP/1.1 400 BAD REQUEST\r\n\r\n".to_string();
         match self.enviar_mensaje(respuesta) {
             Ok(_) => Ok(None),
@@ -131,7 +131,7 @@ impl ClienteHTTP {
     }
 }
 
-impl TipoCliente for ClienteHTTP {
+impl TipoCliente for ClienteHttp {
     /// Encapsula el obtener el comando en particular
     ///
     /// # Resultados
@@ -145,7 +145,7 @@ impl TipoCliente for ClienteHTTP {
             None => return Err(RedisError::Coneccion),
         };
         self.mando = true;
-        let parser = HTTPParser::new(stream);
+        let parser = HttpParser::new(stream);
         let comando_http = match parser.parsear_stream() {
             Ok(orden) => orden,
             Err(_) => return Err(RedisError::Server),
@@ -243,9 +243,9 @@ impl TipoCliente for ClienteHTTP {
     }
 }
 
-impl Clone for ClienteHTTP {
+impl Clone for ClienteHttp {
     fn clone(&self) -> Self {
-        ClienteHTTP {
+        ClienteHttp {
             id: self.id,
             mando: self.mando,
             socket: self.obtener_socket(),
@@ -255,15 +255,15 @@ impl Clone for ClienteHTTP {
     }
 }
 
-impl PartialEq for ClienteHTTP {
+impl PartialEq for ClienteHttp {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl Eq for ClienteHTTP {}
+impl Eq for ClienteHttp {}
 
-impl fmt::Debug for ClienteHTTP {
+impl fmt::Debug for ClienteHttp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ClienteHTTP")
             .field("id", &self.id)

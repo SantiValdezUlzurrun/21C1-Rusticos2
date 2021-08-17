@@ -1,24 +1,24 @@
 use crate::base_de_datos::ResultadoRedis;
-use crate::comando_http::ComandoHTTP;
+use crate::comando_http::ComandoHttp;
 use crate::parser::ParserError;
 use std::io::{BufReader, Read};
 
 /// Entidad encargada de parsear stream que cumplen con la sintaxis del protocolo HTTP/1.1
-pub struct HTTPParser<R> {
+pub struct HttpParser<R> {
     lector: BufReader<R>,
 }
 
-impl<R: Read + std::fmt::Debug> HTTPParser<R> {
+impl<R: Read + std::fmt::Debug> HttpParser<R> {
     /// Instancia a un parser con cualquier entidad que implemente el trait Read
     /// a partir de el se encargara de parsear
     pub fn new(stream: R) -> Self {
-        HTTPParser {
+        HttpParser {
             lector: BufReader::new(stream),
         }
     }
 
     /// Parsea el stream obteniendo un Comando del protocolo HTTP o un Error
-    pub fn parsear_stream(mut self) -> Result<ComandoHTTP, ParserError> {
+    pub fn parsear_stream(mut self) -> Result<ComandoHttp, ParserError> {
         let mut buffer = vec![0; 5000];
         match self.lector.read(&mut buffer) {
             Ok(_) => (),
@@ -42,7 +42,7 @@ impl<R: Read + std::fmt::Debug> HTTPParser<R> {
             Ok(m) => m,
             Err(e) => return Err(e),
         };
-        Ok(ComandoHTTP::new(metodo, headers, comando))
+        Ok(ComandoHttp::new(metodo, headers, comando))
     }
 }
 
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn comando_http_parsea_bien_el_metodo_get() {
         let stream = "GET /hello.htm HTTP/1.1\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\nHost: www.tutorialspoint.com\r\nAccept-Language: en-us\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n".as_bytes();
-        let parser = HTTPParser::new(stream);
+        let parser = HttpParser::new(stream);
 
         let comando = parser.parsear_stream().unwrap();
 
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn comando_http_parsea_bien_el_metodo_post_obteniendo_el_comando_set_key_1() {
         let stream = "POST / HTTP/1.1\r\nHost: foo.com\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 13\r\n\r\ncomando=set+key+1".as_bytes();
-        let parser = HTTPParser::new(stream);
+        let parser = HttpParser::new(stream);
 
         let comando = parser.parsear_stream().unwrap();
 
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn comando_http_parsea_bien_el_metodo_get_con_mas_headers() {
         let stream = "GET / HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nConnection: keep-alive\r\nCache-Control: max-age=0\r\nsec-ch-ua: ' Not A;Brand';v='99', 'Chromium';v='92'\r\nsec-ch-ua-mobile: ?0\r\nUpgrade-Insecure-Requests: 1\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\r\nSec-Fetch-Site: none\r\nSec-Fetch-Mode: navigate\r\nSec-Fetch-User: ?1\r\nSec-Fetch-Dest: document\r\nAccept-Encoding: gzip, deflate, br\r\nAccept-Language: es-419,es;q=0.9,en;q=0.8\r\nCookie: _xsrf=2|e2fa887a|143bb4d760e3f93ddf62f00d31f52215|1626138365; username-127-0-0-1-8888='2|1:0|10:1627770495|23:username-127-0-0-1-8888|44:ZmViN2NkZDcxM2YyNGQ3NzkzOTVjZjkxZDA0ZjBmNjM=|155cba90c7e7bc1b8f94b9505143b6d57153add6b773957f373328a688fd5cef\r\n\r\n\r\n".as_bytes();
-        let parser = HTTPParser::new(stream);
+        let parser = HttpParser::new(stream);
 
         let comando = parser.parsear_stream().unwrap();
 

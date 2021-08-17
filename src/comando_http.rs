@@ -1,14 +1,14 @@
 use crate::comando_info::ComandoInfo;
 
 /// Representa una request del protocolo HTTP
-pub struct ComandoHTTP {
+pub struct ComandoHttp {
     metodo: String,
     args: Vec<String>,
     _headers: Vec<String>,
     comando_redis: Option<ComandoInfo>,
 }
 
-impl ComandoHTTP {
+impl ComandoHttp {
     /// Instancia una request HTTP en condiciones de obtener sus valores
     ///
     /// # Argumentos
@@ -17,7 +17,7 @@ impl ComandoHTTP {
     /// * `headers` - headers de la request
     /// * `comando` - comando redis obtenido de la request
     pub fn new(mut metodo: Vec<String>, _headers: Vec<String>, comando: Vec<String>) -> Self {
-        ComandoHTTP {
+        ComandoHttp {
             metodo: metodo.remove(0),
             args: metodo,
             _headers,
@@ -63,7 +63,7 @@ mod tests {
             "arg4".to_string(),
         ];
 
-        let comando_http = ComandoHTTP::new(metodo, vec![], comando_redis);
+        let comando_http = ComandoHttp::new(metodo, vec![], comando_redis);
 
         assert_eq!("GET".to_string(), comando_http.get_metodo());
         assert_eq!(
@@ -89,7 +89,7 @@ mod tests {
             "arg4".to_string(),
         ];
 
-        let comando_http = ComandoHTTP::new(metodo, vec![], comando_redis);
+        let comando_http = ComandoHttp::new(metodo, vec![], comando_redis);
 
         assert_eq!(
             Some("/favicon.ico".to_string()),

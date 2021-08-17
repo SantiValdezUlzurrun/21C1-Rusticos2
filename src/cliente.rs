@@ -1,5 +1,5 @@
 use crate::base_de_datos::ResultadoRedis;
-use crate::cliente_http::ClienteHTTP;
+use crate::cliente_http::ClienteHttp;
 use crate::cliente_redis::ClienteRedis;
 use crate::comando_info::ComandoInfo;
 use crate::redis_error::RedisError;
@@ -104,7 +104,7 @@ pub fn crear_cliente(id: Token, timeout: u64, stream: TcpStream) -> Box<dyn Tipo
         Err(_) => "".to_string(),
     };
     if mensaje.contains("HTTP") {
-        Box::new(ClienteHTTP::new(id, stream))
+        Box::new(ClienteHttp::new(id, stream))
     } else {
         Box::new(ClienteRedis::new(id, timeout, stream))
     }
