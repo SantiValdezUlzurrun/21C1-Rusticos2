@@ -38,7 +38,7 @@ impl ComandoHandler for ComandoServerHandler {
         (self.a_ejecutar)(&mut self.comando, bdd, self.config)
     }
 }
-
+/// Se encarga de detectar si el comando corresponde a los implementados del tipo server
 pub fn es_comando_server(comando: &str) -> bool {
     let comandos = vec!["FLUSHDB", "DBSIZE", "CONFIG", "INFO", "MONITOR", "PING"];
     comandos.iter().any(|&c| c == comando)
@@ -51,7 +51,7 @@ fn ping(
 ) -> ResultadoRedis {
     ResultadoRedis::StrSimple("PONG".to_string())
 }
-
+/// Borra todas las claves de la base de datos. Este comando nunca falla
 fn flushdb(
     _comando: &mut ComandoInfo,
     bdd: Arc<Mutex<BaseDeDatos>>,
@@ -63,7 +63,7 @@ fn flushdb(
     };
     ResultadoRedis::StrSimple("OK".to_string())
 }
-
+/// Retorna el numero de claves en la base de datos
 fn dbsize(
     _comando: &mut ComandoInfo,
     bdd: Arc<Mutex<BaseDeDatos>>,
@@ -75,7 +75,7 @@ fn dbsize(
     };
     ResultadoRedis::Int(cantidad as isize)
 }
-
+/// Determina si el comando solicidado es config_set o config_get
 fn fconfig(
     comando: &mut ComandoInfo,
     bdd: Arc<Mutex<BaseDeDatos>>,
@@ -96,7 +96,7 @@ fn fconfig(
         _ => ResultadoRedis::Error("ERR Opcion config not found".to_string()),
     }
 }
-
+/// El comando CONFIG GET se utiliza para leer los parámetros de configuración de un servidor en ejecución
 fn config_get(
     comando: &mut ComandoInfo,
     _bdd: Arc<Mutex<BaseDeDatos>>,
@@ -123,7 +123,7 @@ fn config_get(
             .collect(),
     )
 }
-
+/// El comando CONFIG SET se utiliza para reconfigurar un servidor en tiempo de ejecución sin necesidad de reiniciarlo
 fn config_set(
     comando: &mut ComandoInfo,
     _bdd: Arc<Mutex<BaseDeDatos>>,
@@ -145,7 +145,7 @@ fn config_set(
 
     ResultadoRedis::StrSimple("Ok".to_string())
 }
-
+/// El comando INFO retorna información y estadísticas sobre el servidor en un formato fácil de parsear por computadores y fácil de leer por humanos
 fn info(
     _comando: &mut ComandoInfo,
     bdd: Arc<Mutex<BaseDeDatos>>,
@@ -166,7 +166,7 @@ fn info(
             .collect(),
     )
 }
-
+/// Es un comando de depuración que imprime al cliente cada comando procesado por el servidor. Puede ayudar entender qué está sucediendo en la base de datos
 fn monitor(
     _comando: &mut ComandoInfo,
     _bdd: Arc<Mutex<BaseDeDatos>>,

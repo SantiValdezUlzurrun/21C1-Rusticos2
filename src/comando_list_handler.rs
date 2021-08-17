@@ -35,7 +35,7 @@ impl ComandoHandler for ComandoListHandler {
         (self.a_ejecutar)(&mut self.comando, bdd)
     }
 }
-
+/// Se encarga de detectar si el comando corresponde a los implementados del tipo lista
 pub fn es_comando_list(comando: &str) -> bool {
     let comandos = vec![
         "LINDEX", "LPOP", "RPOP", "LPUSH", "LPUSHX", "RPUSH", "RPUSHX", "LRANGE", "LREM", "LSET",
@@ -43,7 +43,7 @@ pub fn es_comando_list(comando: &str) -> bool {
     ];
     comandos.iter().any(|&c| c == comando)
 }
-
+/// Retorna el elemento de la posición index en la lista almacenada en la clave indicada. El índice comienza en 0. Los valores negativos se pueden usar para determinar elementos desde el final de la lista: -1 es el último elemento, -2 es el anteúlitmo, y así. Retorna error si el valor de esa clave no es una lista
 pub fn lindex(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -90,7 +90,7 @@ pub fn lindex(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Result
         ResultadoRedis::BulkStr("nil".to_string())
     }
 }
-
+/// Retorna el largo dela lista almacenada en la clave. Si la clave no existe, se interpreta como lista vacía, retornando 0. Se retorna error si el valor almacenado en la clave no es una lista
 pub fn llen(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -114,11 +114,11 @@ pub fn llen(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
         Err(_) => return ResultadoRedis::Error("ERR when accessing the database".to_string()),
     } as isize)
 }
-
+/// Elimina y retorna el primer elemento de la lista almacenada en la clave. Se puede indicar un parámetro adicional count para indicar obtener esa cantidad de elementos
 pub fn lpop(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     pop(comando, base_de_datos, false)
 }
-
+/// Elimina y obtiene el/los último/s elemento/s de la lista almacenada en la clave indicada. Por defecto, es un solo elemento, se puede indicar una cantidad
 pub fn rpop(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     pop(comando, base_de_datos, true)
 }
@@ -209,7 +209,7 @@ fn push(
     }
     ResultadoRedis::Int(long as isize)
 }
-
+/// Inserta todos los valores especificados en el inicio de la lista de la clave especificada. Si no existe la clave, se crea inicialmente como una lista vacía para luego aplicar las operaciones. Se retorna error si la clave almacena un elemento que no es una lista
 pub fn lpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -234,7 +234,7 @@ pub fn lpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resulta
 
     push(lista, clave, comando, bdd, false)
 }
-
+/// Inserta los valores especificados al inicio de lalista, solamente si la clave existe y almacena una lista. A diferencia de LPUSH, no se realiza operación si la clave no existe
 pub fn lpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -258,7 +258,7 @@ pub fn lpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Result
     };
     push(lista, clave, comando, bdd, false)
 }
-
+/// Inserta todos los valores especificados al final de la lista indicada en la clave. Si la clave no existe, se crear como una lista vacía antes de realizar la operación. Se retorna error si el elemento contenido no es una lista
 pub fn rpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -282,7 +282,7 @@ pub fn rpush(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resulta
     };
     push(lista, clave, comando, bdd, true)
 }
-
+/// Inserta los valores especificados al final de la lista almacenada en la clave indicada, solamente si la clave contiene una lista. En caso contrario, no se realiza ninguna operación
 pub fn rpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -306,7 +306,7 @@ pub fn rpushx(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Result
     };
     push(lista, clave, comando, bdd, true)
 }
-
+/// Retorna los elementos especificados de la lista almacenada en la clave indicada. Los inicios y fin de rango se consideran con el 0 como primer elemento de la lista. Estos valores pueden ser negativos, indicando que corresponde al final de la lista: -1 es el último elemento
 pub fn lrange(comando: &mut ComandoInfo, base_de_datos: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -420,7 +420,10 @@ fn obtener_indice_superior(fin: i32, limite: i32) -> Option<i32> {
 fn esta_en_rango_lista(valor: i32, limite: i32) -> bool {
     0 <= valor && valor < limite
 }
-
+/// Elimina la primer cantidad count de ocurrencias de elementos de la lista almacenada en la clave, igual al elemento indicado por parámetro. El parámetro cantidad influye de esta manera:
+///  count > 0: Elimina elementos iguales al indicado comenzando desde el inicio de la lista.
+///  count < 0: Elimina elementos iguales al indicado comenzando desde el final de la lista.
+///  count = 0: Elimina todos los elementos iguales al indicado.
 pub fn lrem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,
@@ -498,7 +501,7 @@ pub fn lrem(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> Resultad
     }
     ResultadoRedis::Int(cant_eliminada as isize)
 }
-
+/// Setea el elemento de la posición index de la lista con el elemento suministrado. Se retorna error si se indica un rango inválido
 pub fn lset(comando: &mut ComandoInfo, bdd: Arc<Mutex<BaseDeDatos>>) -> ResultadoRedis {
     let clave = match comando.get_clave() {
         Some(c) => c,

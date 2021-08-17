@@ -1,6 +1,7 @@
 use std::option::Option;
 
 #[derive(Debug, Clone)]
+/// Estructura que encapsula los parametros necesarios para ejecutar un comando
 pub struct ComandoInfo {
     nombre: String,
     parametros: Vec<String>,
@@ -36,14 +37,26 @@ impl ComandoInfo {
             .as_ref()
             .map(|clave| clave.to_string())
     }
-
+    /// Devuelve una lista con todos los parametros del comando
     pub fn get_parametros(&self) -> Option<Vec<String>> {
         if !self.parametros.is_empty() {
             return Some(self.parametros.clone());
         }
         None
     }
-
+    /// Devuelve iterativamente los parametros. Cuando ya no quedan parametros devuelve None
+    ///
+    ///# Examples
+    ///
+    /// ```
+    /// COMANDO : LPUSH LISTA 1 2 3 4 5
+    /// 
+    /// comando_info.get_parametros()
+    /// > LISTA
+    /// comando_info.get_parametros()
+    /// > 1
+    /// ...
+    /// ```
     pub fn get_parametro(&mut self) -> Option<String> {
         if self.index < self.parametros.len() {
             let a_devolver = &self.parametros[self.index];
@@ -52,7 +65,7 @@ impl ComandoInfo {
         };
         None
     }
-
+    /// Devuelve un string con una representacion visual del comando
     pub fn descripcion(&self) -> String {
         let mut descripcion = self.nombre.clone();
 
